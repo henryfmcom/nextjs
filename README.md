@@ -87,8 +87,8 @@ A comprehensive resource management system built with Next.js and Supabase, feat
 
 2. **Clone and Setup**
    ```bash
-   git clone https://github.com/phamvuhoang/nextjs-supabase-boilerplate.git
-   cd nextjs-supabase-boilerplate
+   git clone https://github.com/henryfmcom/nextjs.git
+   cd nextjs
    npm install
    ```
 
