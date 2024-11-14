@@ -20,7 +20,12 @@ import { createApiClient } from '@/utils/supabase/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTenant } from '@/utils/tenant-context';
 import { getUserTenants } from '@/utils/supabase/queries';
-import { Tenant } from '@/utils/types';
+
+interface Tenant {
+  id: string;
+  name: string;
+  subdomain: string;
+}
 
 export default function AccountPage({
   user
@@ -42,12 +47,14 @@ export default function AccountPage({
         const tenants = await getUserTenants(supabase, user.id);
         
         if (tenants && tenants.length > 0) {
-          const formattedTenants = tenants.map(ut => ut.tenant! as Tenant);
+          const formattedTenants = tenants.map(ut => ut.tenant as Tenant);
           setUserTenants(formattedTenants);
+          localStorage.setItem('userTenants', JSON.stringify(formattedTenants));
 
           // If no current tenant is selected, set the first one
           if (!currentTenant && formattedTenants.length > 0) {
             setCurrentTenant(formattedTenants[0]);
+            localStorage.setItem('currentTenant', JSON.stringify(formattedTenants[0]));
           }
         }
       } catch (error) {
@@ -63,13 +70,14 @@ export default function AccountPage({
     };
 
     loadTenants();
-  }, [user.id, setUserTenants, setCurrentTenant]);
+  }, [user.id]);
 
   const handleTenantChange = (tenantId: string) => {
-    const selectedTenant = userTenants.find(t => t.id === tenantId);
+    const selectedTenant = userTenants.find((t: Tenant) => t.id === tenantId);
     
     if (selectedTenant) {
       setCurrentTenant(selectedTenant);
+      localStorage.setItem('currentTenant', JSON.stringify(selectedTenant));
       toast({
         title: "Tenant Changed",
         description: `Now working with ${selectedTenant.name}`,
@@ -168,7 +176,7 @@ export default function AccountPage({
                       <SelectValue placeholder="Select a tenant" />
                     </SelectTrigger>
                     <SelectContent>
-                      {userTenants.map((tenant) => (
+                      {userTenants?.map((tenant: Tenant) => (
                         <SelectItem key={tenant.id} value={tenant.id}>
                           {tenant.name}
                         </SelectItem>

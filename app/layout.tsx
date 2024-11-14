@@ -46,14 +46,18 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function RootLayout({ children }: PropsWithChildren) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body>
-        <ThemeProvider
-          defaultTheme="system"
-        >
-          <TenantProvider>
+        <TenantProvider>
+          <ThemeProvider
+            defaultTheme="system"
+          >
             <main
               id="skip"
               className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"
@@ -61,8 +65,8 @@ export default async function RootLayout({ children }: PropsWithChildren) {
               {children}
             </main>
             <Toaster />
-          </TenantProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </TenantProvider>
       </body>
     </html>
   );

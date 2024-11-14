@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/components/ui/use-toast';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { verifyUserTenant } from '@/utils/auth-helpers';
+import { useTenant } from '@/utils/tenant-context';
 
 export type AuthState = 'signin' | 'signup' | 'forgot_password';
 
@@ -17,92 +19,114 @@ interface AuthFormProps {
 export default function AuthForm({ state = 'signin' }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [authState, setAuthState] = useState<AuthState>(state);
+  const router = useRouter();
+  const { setCurrentTenant } = useTenant();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
 
     try {
       const supabase = createClient();
-      let error;
-
-      switch (authState) {
-        case 'signup':
-          const { error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-          });
-          error = signUpError;
-          break;
-        case 'forgot_password':
-          const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
-          error = resetError;
-          break;
-        default:
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          error = signInError;
-      }
-
-      if (error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
+      
+      if (state === 'signin') {
+        // Sign in the user
+        const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
         });
-      } else {
-        if (authState === 'forgot_password') {
-          toast({
-            title: "Check your email",
-            description: "We've sent you a password reset link.",
-          });
-        } else {
-          window.location.href = '/';
-        }
+
+        if (signInError) throw signInError;
+        if (!user) throw new Error('No user returned from sign-in');
+
+        // Verify tenant access and get default tenant
+        const defaultTenant = await verifyUserTenant(supabase, user.id);
+        
+        // Set the default tenant in context
+        setCurrentTenant(defaultTenant);
+
+        // Store tenant in localStorage for persistence
+        localStorage.setItem('currentTenant', JSON.stringify(defaultTenant));
+
+        // Redirect to home page
+        router.push('/');
+        router.refresh();
+      } else if (state === 'signup') {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (signUpError) throw signUpError;
+        
+        // Show success message and redirect to sign in
+        router.push('/auth/signin');
+      } else if (state === 'forgot_password') {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+        if (resetError) throw resetError;
+        
+        // Show success message
+        alert('Password reset email sent');
       }
-    } catch (error) {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      setError(error.message || 'An error occurred');
+      // If there was an error during sign in, make sure we're signed out
+      if (state === 'signin') {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const getTitle = () => {
+    switch (state) {
+      case 'signup': return 'Sign Up';
+      case 'forgot_password': return 'Reset Password';
+      default: return 'Sign In';
+    }
+  };
+
+  const getDescription = () => {
+    switch (state) {
+      case 'signup': return 'Create your account';
+      case 'forgot_password': return 'Enter your email to reset your password';
+      default: return 'Enter your credentials to access your account';
+    }
+  };
+
+  const getButtonText = () => {
+    switch (state) {
+      case 'signup': return loading ? 'Creating Account...' : 'Create Account';
+      case 'forgot_password': return loading ? 'Sending...' : 'Send Reset Link';
+      default: return loading ? 'Signing in...' : 'Sign In';
+    }
+  };
+
   return (
-    <Card className="w-full max-w-md">
+    <Card>
       <CardHeader>
-        <CardTitle>{authState === 'signup' ? 'Sign Up' : authState === 'forgot_password' ? 'Reset Password' : 'Sign In'}</CardTitle>
-        <CardDescription>
-          {authState === 'signup' 
-            ? 'Create a new account' 
-            : authState === 'forgot_password' 
-              ? 'Enter your email to receive a reset link'
-              : 'Enter your credentials to access your account'}
-        </CardDescription>
+        <CardTitle>{getTitle()}</CardTitle>
+        <CardDescription>{getDescription()}</CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              placeholder="Enter your email"
             />
           </div>
-          {authState !== 'forgot_password' && (
-            <div className="space-y-2">
+          {state !== 'forgot_password' && (
+            <div>
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
@@ -110,52 +134,20 @@ export default function AuthForm({ state = 'signin' }: AuthFormProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                placeholder="Enter your password"
               />
             </div>
           )}
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <Button 
-            type="submit" 
-            className="w-full"
-            disabled={loading}
-          >
-            {loading ? 'Processing...' : authState === 'signup' ? 'Sign Up' : authState === 'forgot_password' ? 'Send Reset Link' : 'Sign In'}
+          {error && (
+            <div className="bg-destructive/10 text-destructive text-sm p-2 rounded">
+              {error}
+            </div>
+          )}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {getButtonText()}
           </Button>
-          <div className="text-sm text-center space-y-2">
-            {authState === 'signin' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setAuthState('forgot_password')}
-                  className="text-primary hover:underline"
-                >
-                  Forgot password?
-                </button>
-                <div>
-                  Don't have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setAuthState('signup')}
-                    className="text-primary hover:underline"
-                  >
-                    Sign up
-                  </button>
-                </div>
-              </>
-            )}
-            {(authState === 'signup' || authState === 'forgot_password') && (
-              <button
-                type="button"
-                onClick={() => setAuthState('signin')}
-                className="text-primary hover:underline"
-              >
-                Back to sign in
-              </button>
-            )}
-          </div>
-        </CardFooter>
-      </form>
+        </form>
+      </CardContent>
     </Card>
   );
 }
