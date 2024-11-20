@@ -704,3 +704,39 @@ export async function removeProjectKnowledge(
     throw error;
   }
 }
+
+
+export async function getEmployeeSuggestions(
+  supabase: SupabaseClient,
+  tenantId: string,
+  selectedKnowledges: string[]
+) {
+  if (!selectedKnowledges.length) return [];
+
+  const { data: employees, error } = await supabase
+    .from('Employees')
+    .select(`
+      id,
+      given_name,
+      surname,
+      EmployeeKnowledges!inner (
+        knowledge_id
+      ),
+      Allocations (
+        allocation_percentage,
+        start_date,
+        end_date
+      )
+    `)
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .eq('is_deleted', false)
+    .in('EmployeeKnowledges.knowledge_id', selectedKnowledges);
+
+  if (error) {
+    console.error('Error fetching employee suggestions:', error);
+    throw error;
+  }
+
+  return employees || [];
+}
