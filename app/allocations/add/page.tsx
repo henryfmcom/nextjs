@@ -1,29 +1,52 @@
+'use client'
+
+import { useEffect, useState } from 'react';
 import AddAllocationForm from '@/components/misc/AddAllocationForm';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
-import { getUser } from '@/utils/supabase/queries';
+import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
+import { User } from '@supabase/supabase-js';
 import { toast } from '@/components/ui/use-toast';
-import { SupabaseClient } from '@supabase/supabase-js';
 
-export default async function AddAllocation() {
-  const supabase: SupabaseClient = createClient();
-  let user;
+export default function AddAllocation() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          router.push('/auth/signin');
+          return;
+        }
+        
+        setUser(user);
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch user data. Please try again.",
+          variant: "destructive",
+        });
+        router.push('/allocations');
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadUser();
+  }, [router]);
 
-  try {
-    user = await getUser(supabase);
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    toast({
-      title: "Error",
-      description: "Failed to fetch user data. Please try again.",
-      variant: "destructive",
-    });
-    return redirect('/allocations');
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   if (!user) {
-    return redirect('/auth/signin');
+    return null;
   }
 
   return (

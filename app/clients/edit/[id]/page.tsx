@@ -1,29 +1,58 @@
-import { createClient } from '@/utils/supabase/server';
-import { getUser } from '@/utils/supabase/queries';
+'use client'
+
+import { useEffect, useState } from 'react';
 import AddClientForm from '@/components/misc/AddClientForm';
-import { redirect } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
+import { User } from '@supabase/supabase-js';
 import { toast } from '@/components/ui/use-toast';
 
-export default async function EditClient({ params }: { params: { id: string } }) {
-  const supabase: SupabaseClient = createClient();
-  let user;
+interface EditClientProps {
+  params: {
+    id: string;
+  };
+}
 
-  try {
-    user = await getUser(supabase);
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    toast({
-      title: "Error",
-      description: "Failed to fetch user data. Please try again.",
-      variant: "destructive",
-    });
-    return redirect('/clients');
+export default function EditClient({ params }: EditClientProps) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          router.push('/auth/signin');
+          return;
+        }
+        
+        setUser(user);
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch user data. Please try again.",
+          variant: "destructive",
+        });
+        router.push('/clients');
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadUser();
+  }, [router]);
+
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   if (!user) {
-    return redirect('/auth/signin');
+    return null;
   }
 
   return (
