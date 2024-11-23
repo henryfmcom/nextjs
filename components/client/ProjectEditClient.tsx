@@ -1,14 +1,19 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import DepartmentsPage from '@/components/misc/DepartmentsPage';
+import AddProjectForm from '@/components/misc/AddProjectForm';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { User } from '@supabase/supabase-js';
 import { toast } from '@/components/ui/use-toast';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
-export default function Departments() {
+interface ProjectEditClientProps {
+  id: string;
+}
+
+export default function ProjectEditClient({ id }: ProjectEditClientProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -32,6 +37,7 @@ export default function Departments() {
           description: "Failed to fetch user data. Please try again.",
           variant: "destructive",
         });
+        router.push('/projects');
       } finally {
         setLoading(false);
       }
@@ -41,7 +47,7 @@ export default function Departments() {
   }, [router]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <LoadingSpinner />;
   }
 
   if (!user) {
@@ -51,7 +57,7 @@ export default function Departments() {
   return (
     <div className="h-screen">
       <DashboardLayout user={user}>
-        <DepartmentsPage user={user} />
+        <AddProjectForm projectId={id} />
       </DashboardLayout>
     </div>
   );

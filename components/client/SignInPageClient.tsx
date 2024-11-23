@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import DepartmentsPage from '@/components/misc/DepartmentsPage';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import AuthForm from '@/components/misc/AuthForm';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { User } from '@supabase/supabase-js';
 import { toast } from '@/components/ui/use-toast';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
-export default function Departments() {
+export default function SignInPageClient() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -19,12 +19,12 @@ export default function Departments() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         
-        if (!user) {
-          router.push('/auth/signin');
+        if (user) {
+          router.push('/');
           return;
         }
         
-        setUser(user);
+        setUser(null);
       } catch (error) {
         console.error("Error fetching user:", error);
         toast({
@@ -41,18 +41,14 @@ export default function Departments() {
   }, [router]);
 
   if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!user) {
-    return null;
+    return <LoadingSpinner />;
   }
 
   return (
-    <div className="h-screen">
-      <DashboardLayout user={user}>
-        <DepartmentsPage user={user} />
-      </DashboardLayout>
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="w-full max-w-md">
+        <AuthForm />
+      </div>
     </div>
   );
 } 

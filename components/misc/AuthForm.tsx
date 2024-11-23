@@ -19,6 +19,7 @@ interface AuthFormProps {
 export default function AuthForm({ state = 'signin' }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -114,27 +115,43 @@ export default function AuthForm({ state = 'signin' }: AuthFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
             />
           </div>
           {state !== 'forgot_password' && (
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={state === 'signup' ? 'new-password' : 'current-password'}
+              />
+            </div>
+          )}
+          {state === 'signup' && (
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                required
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
               />
             </div>
           )}

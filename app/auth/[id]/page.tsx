@@ -2,9 +2,14 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import AuthForm, { AuthState } from '@/components/misc/AuthForm';
 import { Navbar } from '@/components/layout/Navbar';
+import { use } from 'react';
 
-export default async function Auth({ params }: { params: { id: string } }) {
-  const supabase = createClient();
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function Auth({ params }: PageProps) {
+  const supabase = await createClient();
 
   const {
     data: { user }
@@ -14,7 +19,8 @@ export default async function Auth({ params }: { params: { id: string } }) {
     return redirect('/');
   }
 
-  const currState = params.id as AuthState;
+  const resolvedParams = use(params);
+  const currState = resolvedParams.id as AuthState;
   if (!['signin', 'signup', 'forgot_password'].includes(currState)) {
     return redirect('/auth/signin');
   }

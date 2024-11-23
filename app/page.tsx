@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import HomePage from '@/components/home/HomePage';
+import { Suspense } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 export default async function Home() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const {
     data: { user }
@@ -13,5 +15,9 @@ export default async function Home() {
     redirect('landing');
   }
 
-  return <HomePage user={user} />;
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <HomePage user={user} />
+    </Suspense>
+  );
 }
