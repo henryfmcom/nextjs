@@ -16,42 +16,48 @@ interface FeatureProps {
 
 const features: FeatureProps[] = [
   {
-    title: 'Responsive Design',
+    title: 'Employee & Contract Management',
     description:
-      'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nisi nesciunt est nostrum omnis ab sapiente.',
+      'Comprehensive employee management with support for multiple contracts, positions, and departments. Track contract details including salary, rates, and terms.',
     image: '/landing/looking-ahead.png'
   },
   {
-    title: 'Intuitive user interface',
+    title: 'Time & Attendance',
     description:
-      'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nisi nesciunt est nostrum omnis ab sapiente.',
+      'Flexible work log management with support for multiple schedules, overtime calculation, and bulk operations. Integrated holiday management and approval workflow.',
     image: '/landing/reflecting.png'
   },
   {
-    title: 'AI-Powered insights',
+    title: 'Payroll & Resource Planning',
     description:
-      'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nisi nesciunt est nostrum omnis ab sapiente.',
+      'Automated payroll processing with overtime calculations and status tracking. Efficient resource allocation with workload visualization and project planning.',
     image: '/landing/growth.png'
   }
 ];
 
 const featureList: string[] = [
-  'Dark/Light theme',
-  'Employee Management ',
-  'Client Management',
+  'Multi-tenant Support',
+  'Dark/Light Theme',
+  'Employee Management',
+  'Contract Management',
+  'Work Scheduling',
+  'Time Tracking',
+  'Payroll Processing',
   'Project Management',
-  'Allocation Management',
-  'Reporting',
-  'Minimalist'
+  'Resource Allocation',
+  'Knowledge Management',
+  'Client Management',
+  'Bulk Operations',
+  'Approval Workflows'
 ];
 
 export const Features = () => {
   return (
     <section id="features" className="container py-24 sm:py-32 space-y-8">
       <h2 className="text-3xl lg:text-4xl font-bold md:text-center">
-        Many{' '}
+        Powerful{' '}
         <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
-          Great Features
+          HR Features
         </span>
       </h2>
 
@@ -67,22 +73,35 @@ export const Features = () => {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         {features.map(({ title, description, image }: FeatureProps) => (
-          <Card key={title}>
+          <Card key={title} className="flex flex-col">
             <CardHeader>
-              <CardTitle>{title}</CardTitle>
+              <CardTitle className="text-xl">{title}</CardTitle>
             </CardHeader>
 
-            <CardContent>{description}</CardContent>
+            <CardContent className="flex-grow">
+              <p className="text-muted-foreground">{description}</p>
+            </CardContent>
 
             <CardFooter>
               <img
                 src={image}
-                alt="About feature"
+                alt={`${title} feature illustration`}
                 className="w-[200px] lg:w-[300px] mx-auto"
               />
             </CardFooter>
           </Card>
         ))}
+      </div>
+
+      <div className="text-center mt-12">
+        <h3 className="text-2xl font-bold mb-4">
+          Built for Modern HR Management
+        </h3>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          Our platform combines powerful features with an intuitive interface to help you 
+          manage your workforce efficiently. From employee onboarding to payroll processing, 
+          we've got you covered with a complete suite of HR tools.
+        </p>
       </div>
     </section>
   );

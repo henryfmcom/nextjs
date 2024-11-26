@@ -16,36 +16,68 @@ A comprehensive resource management system built with Next.js and Supabase, feat
    - Department assignments
    - Knowledge tracking
    - Active/Inactive status
+   - Contract management
+   - Position tracking
+   - Multiple contracts support with overlap detection
 
-2. **Department Management**
+2. **Contract Management**
+   - Employee contracts with positions
+   - Contract types (Monthly, Hourly, etc.)
+   - Salary and payment information
+   - Contract period tracking
+   - Rate configurations (Overtime, Weekend, Holiday)
+   - Probation and notice periods
+
+3. **Work Schedule Management**
+   - Schedule type definitions
+   - Rate multipliers for different schedules
+   - Public holiday management
+   - Bulk holiday import
+
+4. **Work Log Management**
+   - Daily work log tracking
+   - Multiple date entry support
+   - Break time tracking
+   - Overtime calculation
+   - Approval workflow
+   - Bulk import capability
+
+5. **Payroll Management**
+   - Monthly payslip generation
+   - Automatic overtime calculation
+   - Allowances and deductions
+   - Payment status tracking (Draft, Approved, Paid)
+   - Work log integration
+
+6. **Department Management**
    - Hierarchical department structure
    - Department-specific knowledge requirements
    - Employee assignments
 
-3. **Client Management**
+7. **Client Management**
    - Client information tracking
    - Client code management
    - Address and location tracking
 
-4. **Project Management**
+8. **Project Management**
    - Project details and status
    - Client association
    - Required knowledge
    - Project timeline tracking
 
-5. **Knowledge/Skills Management**
+9. **Knowledge/Skills Management**
    - Skill definition and tracking
    - Employee knowledge assignments
    - Project knowledge requirements
 
-6. **Resource Allocation**
-   - Employee project assignments
-   - Allocation percentage tracking
-   - Multiple view options:
-     - List view with pagination
-     - Calendar view with daily allocations
-     - Heatmap view for workload visualization
-   - Workload monitoring and overallocation detection
+10. **Resource Allocation**
+    - Employee project assignments
+    - Allocation percentage tracking
+    - Multiple view options:
+      - List view with pagination
+      - Calendar view with daily allocations
+      - Heatmap view for workload visualization
+    - Workload monitoring and overallocation detection
 
 ## Tech Stack
 
@@ -66,7 +98,11 @@ A comprehensive resource management system built with Next.js and Supabase, feat
 │   ├── departments/       # Department management
 │   ├── clients/          # Client management
 │   ├── projects/         # Project management
-│   └── allocations/      # Resource allocation
+│   ├── allocations/      # Resource allocation
+│   ├── contracts/        # Contract management
+│   ├── work-logs/        # Work log tracking
+│   ├── payslips/         # Payroll management
+│   └── master/           # Master data management
 ├── components/
 │   ├── landing/          # Landing page components
 │   ├── layout/           # Layout components
