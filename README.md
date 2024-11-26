@@ -1,4 +1,4 @@
-# Next.js Supabase Resource Management System
+# Your HRM SaaS
 
 A comprehensive resource management system built with Next.js and Supabase, featuring employee allocation tracking, project management, and skill tracking.
 
@@ -14,7 +14,7 @@ A comprehensive resource management system built with Next.js and Supabase, feat
 1. **Employee Management**
    - Basic employee information
    - Department assignments
-   - Knowledge/Skills tracking
+   - Knowledge tracking
    - Active/Inactive status
 
 2. **Department Management**
@@ -30,13 +30,13 @@ A comprehensive resource management system built with Next.js and Supabase, feat
 4. **Project Management**
    - Project details and status
    - Client association
-   - Required knowledge/skills
+   - Required knowledge
    - Project timeline tracking
 
 5. **Knowledge/Skills Management**
    - Skill definition and tracking
-   - Employee skill assignments
-   - Project skill requirements
+   - Employee knowledge assignments
+   - Project knowledge requirements
 
 6. **Resource Allocation**
    - Employee project assignments
@@ -49,7 +49,7 @@ A comprehensive resource management system built with Next.js and Supabase, feat
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 (App Router), React, TypeScript
+- **Frontend**: Next.js 15 (App Router), React, TypeScript
 - **Backend**: Supabase (PostgreSQL)
 - **Styling**: Tailwind CSS, shadcn/ui
 - **State Management**: React Context
@@ -87,8 +87,8 @@ A comprehensive resource management system built with Next.js and Supabase, feat
 
 2. **Clone and Setup**
    ```bash
-   git clone https://github.com/henryfmcom/nextjs.git
-   cd nextjs
+   git clone https://github.com/phamvuhoang/nextjs-supabase-boilerplate.git
+   cd nextjs-supabase-boilerplate
    npm install
    ```
 
@@ -118,12 +118,22 @@ A comprehensive resource management system built with Next.js and Supabase, feat
      - ProjectKnowledges
      - Allocations
 
-5. **Run Development Server**
+5. **User Setup for Login**
+   - In the Supabase dashboard, navigate to the "Authentication" section.
+   - Create a new **Auto-created User** with the following credentials:
+     - Email: `admin@test.com`
+     - Password: `Aa123456@`
+   - **Add a Record to Tenants Table**:
+     - Insert a new tenant record with the necessary details (e.g., name, subdomain, plan).
+   - **Add a Record to UserTenants Table**:
+     - Link the created user to the tenant by adding a record in the UserTenants table, associating the user ID with the tenant ID.
+
+6. **Run Development Server**
    ```bash
    npm run dev
    ```
 
-6. **Default Login**
+7. **Default Login**
    - Email: admin@test.com
    - Password: Aa123456@
 
@@ -158,6 +168,13 @@ NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
 

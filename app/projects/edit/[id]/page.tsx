@@ -1,18 +1,25 @@
-import { Suspense } from 'react';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import ProjectEditClient from '@/components/client/ProjectEditClient';
-import { use } from 'react';
+import { createClient } from '@/utils/supabase/server';
+import { getUser } from '@/utils/supabase/queries';
+import AddProjectForm from '@/components/misc/AddProjectForm';
+import { redirect } from 'next/navigation';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function EditProject({ params }: PageProps) {
-  const resolvedParams = use(params);
+export default async function EditProject({ params }: PageProps) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const user = await getUser(supabase);
   
+  if (!user) {
+    redirect('/auth/signin');
+  }
+
   return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <ProjectEditClient id={resolvedParams.id} />
-    </Suspense>
+    <DashboardLayout user={user}>
+      <AddProjectForm projectId={id} />
+    </DashboardLayout>
   );
 }

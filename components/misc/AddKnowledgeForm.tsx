@@ -43,7 +43,7 @@ export default function AddKnowledgeForm({ knowledgeId }: { knowledgeId: string 
             description: "Knowledge not found or belongs to different tenant.",
             variant: "destructive",
           });
-          router.push('/knowledge');
+          router.push('/master/knowledge');
         }
       }
     };
@@ -88,7 +88,7 @@ export default function AddKnowledgeForm({ knowledgeId }: { knowledgeId: string 
         await addKnowledge(supabase, knowledgeData);
       }
 
-      router.push('/knowledge');
+      router.push('/master/knowledge');
     } catch (error: any) {
       setError(error.message || 'Failed to save knowledge.');
       console.error('Error saving knowledge:', error);
@@ -153,7 +153,7 @@ export default function AddKnowledgeForm({ knowledgeId }: { knowledgeId: string 
               </div>
               {error && <div className="text-red-500 bg-red-100 p-2 rounded">{error}</div>}
               <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => router.push('/knowledge')}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => router.push('/master/knowledge')}>Cancel</Button>
                 <Button type="submit">Submit</Button>
               </div>
             </div>

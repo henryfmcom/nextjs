@@ -705,7 +705,6 @@ export async function removeProjectKnowledge(
   }
 }
 
-
 export async function getEmployeeSuggestions(
   supabase: SupabaseClient,
   tenantId: string,
@@ -739,4 +738,777 @@ export async function getEmployeeSuggestions(
   }
 
   return employees || [];
+}
+
+export async function getPositions(
+  supabase: SupabaseClient,
+  tenantId: string,
+  page?: number,
+  itemsPerPage?: number
+) {
+  try {
+    let query = supabase
+      .from('Positions')
+      .select(`
+        *,
+        department:Departments(name)
+      `, { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false });
+
+    if (page && itemsPerPage) {
+      const from = (page - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    // Transform the data to match the Position interface
+    const positions = data.map(position => ({
+      id: position.id,
+      title: position.title,
+      department_id: position.department_id,
+      department_name: position.department?.name,
+      level: position.level,
+      is_active: position.is_active
+    }));
+
+    return { positions, count };
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function getPosition(
+  supabase: SupabaseClient,
+  positionId: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('Positions')
+      .select(`
+        *,
+        department:Departments(id, name)
+      `)
+      .eq('id', positionId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function addPosition(
+  supabase: SupabaseClient,
+  positionData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('Positions')
+      .insert([positionData])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function updatePosition(
+  supabase: SupabaseClient,
+  positionData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('Positions')
+      .update(positionData)
+      .eq('id', positionData.id)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function getContractTypes(
+  supabase: SupabaseClient,
+  tenantId: string,
+  page?: number,
+  itemsPerPage?: number
+) {
+  try {
+    let query = supabase
+      .from('ContractTypes')
+      .select('*', { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false });
+
+    if (page && itemsPerPage) {
+      const from = (page - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return { contractTypes: data, count };
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function getContractType(
+  supabase: SupabaseClient,
+  contractTypeId: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('ContractTypes')
+      .select('*')
+      .eq('id', contractTypeId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function addContractType(
+  supabase: SupabaseClient,
+  contractTypeData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('ContractTypes')
+      .insert([contractTypeData])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function updateContractType(
+  supabase: SupabaseClient,
+  contractTypeData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('ContractTypes')
+      .update(contractTypeData)
+      .eq('id', contractTypeData.id)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function getEmployeeContracts(
+  supabase: SupabaseClient,
+  tenantId: string,
+  page?: number,
+  itemsPerPage?: number,
+  employeeId?: string
+) {
+  try {
+    let query = supabase
+      .from('EmployeeContracts')
+      .select(`
+        *,
+        employee:Employees(given_name, surname),
+        position:Positions(title),
+        contract_type:ContractTypes(name)
+      `, { count: 'exact' })
+      .eq('tenant_id', tenantId);
+
+    if (employeeId) {
+      query = query.eq('employee_id', employeeId);
+    }
+
+    query = query.order('start_date', { ascending: false });
+
+    if (page && itemsPerPage) {
+      const from = (page - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    const contracts = data.map(contract => ({
+      ...contract,
+      employee_name: `${contract.employee.given_name} ${contract.employee.surname}`,
+      position_title: contract.position.title,
+      contract_type_name: contract.contract_type.name
+    }));
+
+    return { contracts, count };
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function getEmployeeContract(
+  supabase: SupabaseClient,
+  contractId: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('EmployeeContracts')
+      .select(`
+        *,
+        employee:Employees(id, given_name, surname),
+        position:Positions(id, title),
+        contract_type:ContractTypes(id, name)
+      `)
+      .eq('id', contractId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function addEmployeeContract(
+  supabase: SupabaseClient,
+  contractData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('EmployeeContracts')
+      .insert([contractData])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function updateEmployeeContract(
+  supabase: SupabaseClient,
+  contractData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('EmployeeContracts')
+      .update(contractData)
+      .eq('id', contractData.id)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function getPublicHolidays(
+  supabase: SupabaseClient,
+  tenantId: string,
+  year?: number,
+  page?: number,
+  itemsPerPage?: number
+) {
+  try {
+    let query = supabase
+      .from('PublicHolidays')
+      .select('*', { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('date', { ascending: true });
+
+    if (year) {
+      const startDate = `${year}-01-01`;
+      const endDate = `${year}-12-31`;
+      query = query.gte('date', startDate).lte('date', endDate);
+    }
+
+    if (page && itemsPerPage) {
+      const from = (page - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return { holidays: data, count };
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function getPublicHoliday(
+  supabase: SupabaseClient,
+  holidayId: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('PublicHolidays')
+      .select('*')
+      .eq('id', holidayId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function addPublicHoliday(
+  supabase: SupabaseClient,
+  holidayData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('PublicHolidays')
+      .insert([holidayData])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function updatePublicHoliday(
+  supabase: SupabaseClient,
+  holidayData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('PublicHolidays')
+      .update(holidayData)
+      .eq('id', holidayData.id)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function bulkAddPublicHolidays(
+  supabase: SupabaseClient,
+  holidays: any[]
+) {
+  try {
+    const { data, error } = await supabase
+      .from('PublicHolidays')
+      .insert(holidays)
+      .select();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function getWorkScheduleTypes(
+  supabase: SupabaseClient,
+  tenantId: string,
+  page?: number,
+  itemsPerPage?: number
+) {
+  try {
+    let query = supabase
+      .from('WorkScheduleTypes')
+      .select('*', { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false });
+
+    if (page && itemsPerPage) {
+      const from = (page - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return { scheduleTypes: data, count };
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function getWorkScheduleType(
+  supabase: SupabaseClient,
+  scheduleTypeId: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('WorkScheduleTypes')
+      .select('*')
+      .eq('id', scheduleTypeId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function addWorkScheduleType(
+  supabase: SupabaseClient,
+  scheduleTypeData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('WorkScheduleTypes')
+      .insert([scheduleTypeData])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function updateWorkScheduleType(
+  supabase: SupabaseClient,
+  scheduleTypeData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('WorkScheduleTypes')
+      .update(scheduleTypeData)
+      .eq('id', scheduleTypeData.id)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function getWorkLogs(
+  supabase: SupabaseClient,
+  tenantId: string,
+  employeeId?: string,
+  startDate?: string,
+  endDate?: string,
+  page?: number,
+  itemsPerPage?: number
+) {
+  try {
+    let query = supabase
+      .from('WorkLogs')
+      .select(`
+        *,
+        employee:Employees(given_name, surname),
+        schedule_type:WorkScheduleTypes(name, multiplier),
+        approver:Employees(given_name, surname)
+      `, { count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .order('date', { ascending: false });
+
+    if (employeeId) {
+      query = query.eq('employee_id', employeeId);
+    }
+
+    if (startDate) {
+      query = query.gte('date', startDate);
+    }
+
+    if (endDate) {
+      query = query.lte('date', endDate);
+    }
+
+    if (page && itemsPerPage) {
+      const from = (page - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    const workLogs = data.map(log => ({
+      ...log,
+      employee_name: `${log.employee.given_name} ${log.employee.surname}`,
+      schedule_type_name: log.schedule_type.name,
+      schedule_type_multiplier: log.schedule_type.multiplier,
+      approver_name: log.approver ? `${log.approver.given_name} ${log.approver.surname}` : null
+    }));
+
+    return { workLogs, count };
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function getWorkLog(
+  supabase: SupabaseClient,
+  workLogId: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('WorkLogs')
+      .select(`
+        *,
+        employee:Employees(id, given_name, surname),
+        schedule_type:WorkScheduleTypes(id, name, multiplier)
+      `)
+      .eq('id', workLogId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function addWorkLog(
+  supabase: SupabaseClient,
+  workLogData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('WorkLogs')
+      .insert([workLogData])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function updateWorkLog(
+  supabase: SupabaseClient,
+  workLogData: any
+) {
+  try {
+    const { data, error } = await supabase
+      .from('WorkLogs')
+      .update(workLogData)
+      .eq('id', workLogData.id)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function approveWorkLog(
+  supabase: SupabaseClient,
+  workLogId: string,
+  approverId: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('WorkLogs')
+      .update({
+        status: 'approved',
+        approved_by: approverId,
+        approved_at: new Date().toISOString()
+      })
+      .eq('id', workLogId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function rejectWorkLog(
+  supabase: SupabaseClient,
+  workLogId: string,
+  approverId: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('WorkLogs')
+      .update({
+        status: 'rejected',
+        approved_by: approverId,
+        approved_at: new Date().toISOString()
+      })
+      .eq('id', workLogId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+export async function bulkAddWorkLogs(
+  supabase: SupabaseClient,
+  workLogs: any[]
+) {
+  try {
+    const { data, error } = await supabase
+      .from('WorkLogs')
+      .insert(workLogs.map(log => ({
+        ...log,
+        status: 'pending'
+      })))
+      .select();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
 }

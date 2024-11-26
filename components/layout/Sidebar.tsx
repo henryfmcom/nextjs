@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from "@/components/ui/button";
-import { Users, Briefcase, X, ChevronLeft, ChevronRight, Calendar, FolderTree, BookOpen } from "lucide-react";
+import { Users, Briefcase, X, ChevronLeft, ChevronRight, Calendar, FolderTree, BookOpen, FileText, Network, List, Clock, ClipboardList, Database } from "lucide-react";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from './Logo';
@@ -11,13 +11,105 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
+const NAVIGATION_ITEMS = [
+  {
+    title: "Allocations",
+    href: "/allocations",
+    icon: Calendar,
+  },
+  {
+    title: "Projects",
+    href: "/projects",
+    icon: Briefcase,
+  },
+  {
+    title: "Clients",
+    href: "/clients",
+    icon: Users,
+  },
+  {
+    title: "HR",
+    icon: Users,
+    children: [
+      {
+        title: "Departments",
+        href: "/departments",
+        icon: Network,
+      },
+      {
+        title: "Employees",
+        href: "/employees",
+        icon: Users,
+      },
+      {
+        title: "Employee Contracts",
+        href: "/contracts",
+        icon: FileText,
+      },
+      {
+        title: "Work Logs",
+        href: "/work-logs",
+        icon: ClipboardList,
+      },
+      {
+        title: "Payslips",
+        href: "/payslips",
+        icon: FileText,
+      },
+    ]
+  },
+  {
+    title: "Master",
+    icon: Database,
+    children: [
+      {
+        title: "Contract Types",
+        href: "/master/contract-types",
+        icon: FileText,
+      },
+      {
+        title: "Work Schedules",
+        href: "/master/schedules",
+        icon: Clock,
+      },
+      {
+        title: "Public Holidays",
+        href: "/master/holidays",
+        icon: Calendar,
+      },
+      {
+        title: "Positions",
+        href: "/master/positions",
+        icon: Briefcase,
+      },
+      {
+        title: "Knowledge",
+        href: "/master/knowledge",
+        icon: BookOpen,
+      },
+    ]
+  },
+];
+
 export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(true);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded);
   };
+
+  const toggleSection = (title: string) => {
+    if (!isExpanded) {
+      setIsExpanded(true);
+      setExpandedSection(title);
+    } else {
+      setExpandedSection(expandedSection === title ? null : title);
+    }
+  };
+
+  const isActiveLink = (href: string) => pathname.startsWith(href);
 
   return (
     <aside className={`bg-card shadow-md flex flex-col h-full transition-all duration-300 ${
@@ -55,66 +147,52 @@ export function Sidebar({ onClose }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="space-y-2">
-          <Link href="/allocations">
-            <Button 
-              variant={pathname.startsWith('/allocations') ? "secondary" : "ghost"} 
-              className={`w-full justify-start ${!isExpanded && 'justify-center'}`}
-              title="Allocations"
-            >
-              <Calendar className="h-4 w-4" />
-              {isExpanded && <span className="ml-2">Allocations</span>}
-            </Button>
-          </Link>
-          <Link href="/employees">
-            <Button 
-              variant={pathname.startsWith('/employees') ? "secondary" : "ghost"} 
-              className={`w-full justify-start ${!isExpanded && 'justify-center'}`}
-              title="Employees"
-            >
-              <Users className="h-4 w-4" />
-              {isExpanded && <span className="ml-2">Employees</span>}
-            </Button>
-          </Link>
-          <Link href="/departments">
-            <Button 
-              variant={pathname.startsWith('/departments') ? "secondary" : "ghost"} 
-              className={`w-full justify-start ${!isExpanded && 'justify-center'}`}
-              title="Departments"
-            >
-              <FolderTree className="h-4 w-4" />
-              {isExpanded && <span className="ml-2">Departments</span>}
-            </Button>
-          </Link>
-          <Link href="/clients">
-            <Button 
-              variant={pathname.startsWith('/clients') ? "secondary" : "ghost"} 
-              className={`w-full justify-start ${!isExpanded && 'justify-center'}`}
-              title="Clients"
-            >
-              <Users className="h-4 w-4" />
-              {isExpanded && <span className="ml-2">Clients</span>}
-            </Button>
-          </Link>
-          <Link href="/projects">
-            <Button 
-              variant={pathname.startsWith('/projects') ? "secondary" : "ghost"} 
-              className={`w-full justify-start ${!isExpanded && 'justify-center'}`}
-              title="Projects"
-            >
-              <Briefcase className="h-4 w-4" />
-              {isExpanded && <span className="ml-2">Projects</span>}
-            </Button>
-          </Link>
-          <Link href="/knowledge">
-            <Button 
-              variant={pathname.startsWith('/knowledge') ? "secondary" : "ghost"} 
-              className={`w-full justify-start ${!isExpanded && 'justify-center'}`}
-              title="Knowledge"
-            >
-              <BookOpen className="h-4 w-4" />
-              {isExpanded && <span className="ml-2">Knowledge</span>}
-            </Button>
-          </Link>
+          {NAVIGATION_ITEMS.map((item) => (
+            <div key={item.title}>
+              {item.children ? (
+                // Parent item with children
+                <div className="space-y-1">
+                  <Button
+                    variant={expandedSection === item.title ? "secondary" : "ghost"}
+                    className={`w-full ${isExpanded ? 'justify-start' : 'justify-center'}`}
+                    onClick={() => toggleSection(item.title)}
+                    title={item.title}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {isExpanded && <span className="ml-2">{item.title}</span>}
+                  </Button>
+                  {isExpanded && expandedSection === item.title && (
+                    <div className="ml-4 space-y-1">
+                      {item.children.map((child) => (
+                        <Link key={child.href} href={child.href}>
+                          <Button
+                            variant={isActiveLink(child.href) ? "secondary" : "ghost"}
+                            className="w-full justify-start"
+                            size="sm"
+                          >
+                            <child.icon className="h-4 w-4" />
+                            <span className="ml-2">{child.title}</span>
+                          </Button>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Single item
+                <Link href={item.href}>
+                  <Button
+                    variant={isActiveLink(item.href) ? "secondary" : "ghost"}
+                    className={`w-full ${isExpanded ? 'justify-start' : 'justify-center'}`}
+                    title={item.title}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {isExpanded && <span className="ml-2">{item.title}</span>}
+                  </Button>
+                </Link>
+              )}
+            </div>
+          ))}
         </nav>
       </div>
     </aside>

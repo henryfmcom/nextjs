@@ -28,12 +28,25 @@ import {
   getKnowledges, 
   getEmployeeKnowledge,
   addEmployeeKnowledge, 
-  removeEmployeeKnowledge 
+  removeEmployeeKnowledge,
+  getEmployeeContracts
 } from '@/utils/supabase/queries';
+import { DepartmentSelect } from "@/components/ui/department-select";
+import { format } from 'date-fns';
 
 interface FormattedDepartment extends Department {
   level: number;
   displayName: string;
+}
+
+interface EmployeeContract {
+  id: string;
+  start_date: string;
+  end_date: string | null;
+  position_title: string;
+  contract_type_name: string;
+  base_salary: number;
+  currency: string;
 }
 
 export default function AddEmployeeForm({ employeeId }: { employeeId: string | null }) {
@@ -59,6 +72,7 @@ export default function AddEmployeeForm({ employeeId }: { employeeId: string | n
   const [knowledges, setKnowledges] = useState<Knowledge[]>([]);
   const [selectedKnowledges, setSelectedKnowledges] = useState<string[]>([]);
   const [knowledgeSearchOpen, setKnowledgeSearchOpen] = useState(false);
+  const [contracts, setContracts] = useState<EmployeeContract[]>([]);
 
   // Function to format departments into hierarchical structure
   const formatDepartmentsHierarchy = (
@@ -143,6 +157,34 @@ export default function AddEmployeeForm({ employeeId }: { employeeId: string | n
     fetchData();
   }, [employeeId, currentTenant]);
 
+  useEffect(() => {
+    const fetchContracts = async () => {
+      if (employeeId && currentTenant) {
+        try {
+          const supabase = createClient();
+          const { contracts: contractsData } = await getEmployeeContracts(
+            supabase,
+            currentTenant.id,
+            undefined,
+            undefined,
+            employeeId
+          );
+          
+          // Sort by start date desc
+          const sortedContracts = contractsData.sort((a, b) => 
+            new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
+          );
+          
+          setContracts(sortedContracts);
+        } catch (error) {
+          console.error('Error fetching contracts:', error);
+        }
+      }
+    };
+
+    fetchContracts();
+  }, [employeeId, currentTenant]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -169,8 +211,15 @@ export default function AddEmployeeForm({ employeeId }: { employeeId: string | n
       const supabase = createClient();
       const employeeData = {
         ...formData,
-        tenant_id: currentTenant.id
+        birth_date: (formData as Employee).birth_date || undefined,
+        tenant_id: currentTenant.id,
+        is_deleted: false
       };
+
+      // Remove empty birth_date if it exists
+      if (!employeeData.birth_date) {
+        delete employeeData.birth_date;
+      }
 
       if (employeeId) {
         await updateEmployee(supabase, { id: employeeId, ...employeeData });
@@ -217,6 +266,44 @@ export default function AddEmployeeForm({ employeeId }: { employeeId: string | n
   useEffect(() => {
     console.log('selectedKnowledges updated:', selectedKnowledges);
   }, [selectedKnowledges]);
+
+  const getContractStatus = (contract: EmployeeContract) => {
+    const now = new Date();
+    const start = new Date(contract.start_date);
+    const end = contract.end_date ? new Date(contract.end_date) : null;
+
+    if (now < start) return 'pending';
+    if (end && now > end) return 'expired';
+    return 'active';
+  };
+
+  const checkContractOverlap = (contract: EmployeeContract) => {
+    const start = new Date(contract.start_date);
+    const end = contract.end_date ? new Date(contract.end_date) : null;
+
+    return contracts.some(other => {
+      if (other.id === contract.id) return false;
+      
+      const otherStart = new Date(other.start_date);
+      const otherEnd = other.end_date ? new Date(other.end_date) : null;
+
+      // Check if dates overlap
+      if (!end && !otherEnd) return true; // Both ongoing
+      if (!end) return !otherEnd || otherEnd > start;
+      if (!otherEnd) return end > otherStart;
+      return start <= otherEnd && end >= otherStart;
+    });
+  };
+
+  const getRowStyle = (contract: EmployeeContract) => {
+    const status = getContractStatus(contract);
+    const hasOverlap = checkContractOverlap(contract);
+
+    if (hasOverlap) return 'bg-red-100 dark:bg-red-900/20';
+    if (status === 'active') return 'bg-green-100 dark:bg-green-900/20';
+    if (status === 'pending') return 'bg-yellow-100 dark:bg-yellow-900/20';
+    return 'bg-gray-100 dark:bg-gray-800/50';
+  };
 
   if (!currentTenant) {
     return (
@@ -355,24 +442,11 @@ export default function AddEmployeeForm({ employeeId }: { employeeId: string | n
               </div>
               <div>
                 <Label htmlFor="departments">Departments</Label>
-                <Select 
+                <DepartmentSelect
                   value={selectedDepartments.join(',')}
                   onValueChange={(value) => setSelectedDepartments(value.split(',').filter(Boolean))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select departments" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem 
-                        key={dept.id} 
-                        value={dept.id}
-                      >
-                        {dept.displayName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Select departments"
+                />
               </div>
 
               <div>
@@ -457,6 +531,49 @@ export default function AddEmployeeForm({ employeeId }: { employeeId: string | n
           </form>
         </CardContent>
       </Card>
+
+      {employeeId && (
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold mb-4">Contracts</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left bg-muted">
+                  <th className="p-2">Position</th>
+                  <th className="p-2">Contract Type</th>
+                  <th className="p-2">Start Date</th>
+                  <th className="p-2">End Date</th>
+                  <th className="p-2">Salary</th>
+                </tr>
+              </thead>
+              <tbody>
+                {contracts.map((contract) => (
+                  <tr 
+                    key={contract.id}
+                    className={`border-b hover:bg-muted/50 cursor-pointer ${getRowStyle(contract)}`}
+                    onClick={() => router.push(`/contracts/edit/${contract.id}`)}
+                  >
+                    <td className="p-2">{contract.position_title}</td>
+                    <td className="p-2">{contract.contract_type_name}</td>
+                    <td className="p-2">{format(new Date(contract.start_date), 'dd/MM/yyyy')}</td>
+                    <td className="p-2">
+                      {contract.end_date ? format(new Date(contract.end_date), 'dd/MM/yyyy') : 'Ongoing'}
+                    </td>
+                    <td className="p-2">
+                      {contract.base_salary} {contract.currency}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {contracts.length === 0 && (
+            <div className="text-center py-4 text-muted-foreground">
+              No contracts found
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

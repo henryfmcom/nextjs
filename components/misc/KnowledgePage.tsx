@@ -92,7 +92,7 @@ export default function KnowledgePage({ user }: KnowledgePageProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Knowledge List</CardTitle>
-          <Link href="/knowledge/add">
+          <Link href="/master/knowledge/add">
             <Button variant="default">+ Add New</Button>
           </Link>
         </CardHeader>
@@ -111,7 +111,7 @@ export default function KnowledgePage({ user }: KnowledgePageProps) {
                 <tr 
                   key={knowledge.id} 
                   className="border-b hover:bg-muted/50 cursor-pointer"
-                  onClick={() => router.push(`/knowledge/edit/${knowledge.id}`)}
+                  onClick={() => router.push(`/master/knowledge/edit/${knowledge.id}`)}
                 >
                   <td className="p-2">{knowledge.title}</td>
                   <td className="p-2">{knowledge.description}</td>

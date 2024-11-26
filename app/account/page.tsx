@@ -1,11 +1,15 @@
-import { Suspense } from 'react';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import DynamicAccountWrapper from '@/components/client/DynamicAccountWrapper';
+import AccountPage from '@/components/misc/AccountPage';
+import { createClient } from '@/utils/supabase/server';
+import { redirect } from 'next/navigation';
+import { getUser } from '@/utils/supabase/queries';
 
-export default function Account() {
-  return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <DynamicAccountWrapper />
-    </Suspense>
-  );
+export default async function Account() {
+  const supabase = await createClient();
+  const user = await getUser(supabase);
+
+  if (!user) {
+    return redirect('/auth/signin');
+  }
+
+  return <AccountPage user={user} />;
 }

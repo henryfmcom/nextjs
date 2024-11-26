@@ -9,7 +9,8 @@ import {
   isToday,
   isSameMonth,
   addMonths,
-  subMonths
+  subMonths,
+  isWeekend
 } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -55,6 +56,14 @@ export function CalendarView({ allocations }: CalendarViewProps) {
     const end = endOfMonth(currentDate);
     return eachDayOfInterval({ start, end });
   }, [currentDate]);
+
+  // Add getMonthStartDays function
+  const getMonthStartDays = (date: Date) => {
+    const start = startOfMonth(date);
+    const day = start.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const emptyDays = Array(day).fill(null);
+    return emptyDays;
+  };
 
   // Process allocations for each day
   const dailyAllocations = useMemo(() => {
@@ -148,12 +157,21 @@ export function CalendarView({ allocations }: CalendarViewProps) {
     );
   };
 
-  const renderDayAllocations = (allocations: DayAllocation[]) => {
-    if (allocations.length <= CALENDAR_SINGLE_ROW_LIMIT) {
+  const renderDayAllocations = (date: Date, dayAllocations: DayAllocation[]) => {
+    // Don't show allocations on weekends
+    if (isWeekend(date)) {
+      return (
+        <div className="text-sm text-muted-foreground italic">
+          Weekend
+        </div>
+      );
+    }
+
+    if (dayAllocations.length <= CALENDAR_SINGLE_ROW_LIMIT) {
       // Single row layout
       return (
         <div className="space-y-1">
-          {allocations.map((allocation) => (
+          {dayAllocations.map((allocation) => (
             <div key={allocation.employee_name}>
               {renderAllocationCell(allocation)}
             </div>
@@ -162,11 +180,11 @@ export function CalendarView({ allocations }: CalendarViewProps) {
       );
     }
 
-    if (allocations.length <= CALENDAR_DOUBLE_ROW_LIMIT) {
+    if (dayAllocations.length <= CALENDAR_DOUBLE_ROW_LIMIT) {
       // Double column layout
       return (
         <div className="grid grid-cols-2 gap-1">
-          {allocations.map((allocation) => (
+          {dayAllocations.map((allocation) => (
             <div key={allocation.employee_name}>
               {renderAllocationCell(allocation)}
             </div>
@@ -176,12 +194,12 @@ export function CalendarView({ allocations }: CalendarViewProps) {
     }
 
     // Circle layout for many allocations
-    const displayCount = Math.min(allocations.length, CALENDAR_MAX_CIRCLES);
-    const hasMore = allocations.length > CALENDAR_MAX_CIRCLES;
+    const displayCount = Math.min(dayAllocations.length, CALENDAR_MAX_CIRCLES);
+    const hasMore = dayAllocations.length > CALENDAR_MAX_CIRCLES;
 
     return (
       <div className="flex flex-wrap gap-1">
-        {allocations.slice(0, displayCount).map((allocation) => (
+        {dayAllocations.slice(0, displayCount).map((allocation) => (
           <div key={allocation.employee_name}>
             {renderAllocationCircle(allocation)}
           </div>
@@ -189,7 +207,7 @@ export function CalendarView({ allocations }: CalendarViewProps) {
         {hasMore && (
           <div 
             className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs cursor-pointer"
-            title={`${allocations.length - CALENDAR_MAX_CIRCLES} more employees`}
+            title={`${dayAllocations.length - CALENDAR_MAX_CIRCLES} more employees`}
           >
             ...
           </div>
@@ -223,10 +241,21 @@ export function CalendarView({ allocations }: CalendarViewProps) {
       </div>
 
       <div className="grid grid-cols-7 gap-1">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-          <div key={day} className="text-center font-medium py-2">
+        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => (
+          <div 
+            key={day} 
+            className={cn(
+              "text-center font-medium py-2",
+              (index === 0 || index === 6) && "text-red-500"
+            )}
+          >
             {day}
           </div>
+        ))}
+
+        {/* Add empty cells for days before the first of the month */}
+        {getMonthStartDays(currentDate).map((_, index) => (
+          <div key={`empty-${index}`} className="min-h-[120px] bg-muted/50" />
         ))}
 
         {days.map((day) => {
@@ -240,13 +269,24 @@ export function CalendarView({ allocations }: CalendarViewProps) {
                 "min-h-[120px] p-1 border rounded-md",
                 !isSameMonth(day, currentDate) && "bg-muted/50",
                 isToday(day) && "border-primary",
+                isWeekend(day) && "bg-gray-100 dark:bg-gray-800/50",
                 "dark:border-zinc-700"
               )}
             >
-              <div className="text-right text-sm mb-1">
+              <div className={cn(
+                "text-right text-sm mb-1",
+                isWeekend(day) && "text-red-500"
+              )}>
                 {format(day, 'd')}
               </div>
-              {renderDayAllocations(dayAllocations)}
+              {/* Don't show allocations on weekends */}
+              {isWeekend(day) ? (
+                <div className="text-sm text-muted-foreground italic">
+                  Weekend
+                </div>
+              ) : (
+                renderDayAllocations(day, dayAllocations)
+              )}
             </div>
           );
         })}

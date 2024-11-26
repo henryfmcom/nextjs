@@ -208,3 +208,116 @@ create index if not exists "Allocations_tenant_id_idx" on public."Allocations" u
 create index if not exists idx_employee_allocation on public."Allocations" using btree (employee_id, start_date, end_date) tablespace pg_default;
 
 create index if not exists idx_project_allocation on public."Allocations" using btree (project_id, start_date, end_date) tablespace pg_default;
+
+
+CREATE TABLE public."Positions" (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title VARCHAR(255) NOT NULL,
+  department_id uuid,
+  level VARCHAR(50),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  tenant_id uuid NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT positions_pkey PRIMARY KEY (id),
+  CONSTRAINT tenant_fk FOREIGN KEY (tenant_id) REFERENCES "Tenants" (id),
+  CONSTRAINT department_fk FOREIGN KEY (department_id) REFERENCES "Departments" (id)
+);
+
+CREATE TABLE public."ContractTypes" (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  payment_type VARCHAR(20) NOT NULL, -- monthly, hourly, one_time
+  tenant_id uuid NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT contract_types_pkey PRIMARY KEY (id),
+  CONSTRAINT tenant_fk FOREIGN KEY (tenant_id) REFERENCES "Tenants" (id)
+);
+
+CREATE TABLE public."EmployeeContracts" (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  employee_id uuid NOT NULL,
+  contract_type_id uuid NOT NULL,
+  position_id uuid NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE,
+  base_salary DECIMAL(12,2) NOT NULL,
+  currency VARCHAR(3) NOT NULL,
+  working_hours INTEGER, -- weekly working hours
+  overtime_rate DECIMAL(4,2), -- e.g., 1.5 for 150%
+  weekend_rate DECIMAL(4,2),
+  holiday_rate DECIMAL(4,2),
+  probation_period INTEGER, -- in months
+  notice_period INTEGER, -- in months
+  tenant_id uuid NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT employee_contracts_pkey PRIMARY KEY (id),
+  CONSTRAINT employee_fk FOREIGN KEY (employee_id) REFERENCES "Employees" (id),
+  CONSTRAINT contract_type_fk FOREIGN KEY (contract_type_id) REFERENCES "ContractTypes" (id),
+  CONSTRAINT position_fk FOREIGN KEY (position_id) REFERENCES "Positions" (id),
+  CONSTRAINT tenant_fk FOREIGN KEY (tenant_id) REFERENCES "Tenants" (id)
+);
+
+CREATE TABLE public."PublicHolidays" (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  date DATE NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  tenant_id uuid NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT public_holidays_pkey PRIMARY KEY (id),
+  CONSTRAINT tenant_fk FOREIGN KEY (tenant_id) REFERENCES "Tenants" (id)
+);
+
+
+CREATE TABLE public."WorkScheduleTypes" (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name VARCHAR(50) NOT NULL, -- regular, weekend, holiday
+  multiplier DECIMAL(4,2) NOT NULL, -- 1.0 for regular, 1.5 for overtime, 2.0 for holiday
+  tenant_id uuid NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT work_schedule_types_pkey PRIMARY KEY (id),
+  CONSTRAINT tenant_fk FOREIGN KEY (tenant_id) REFERENCES "Tenants" (id)
+);
+
+CREATE TABLE public."WorkLogs" (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  employee_id uuid NOT NULL,
+  schedule_type_id uuid NOT NULL,
+  date DATE NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  break_duration INTEGER NOT NULL DEFAULT 0, -- in minutes
+  description TEXT,
+  status VARCHAR(20) NOT NULL, -- pending, approved, rejected
+  approved_by uuid,
+  approved_at TIMESTAMPTZ,
+  tenant_id uuid NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT work_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT employee_fk FOREIGN KEY (employee_id) REFERENCES "Employees" (id),
+  CONSTRAINT schedule_type_fk FOREIGN KEY (schedule_type_id) REFERENCES "WorkScheduleTypes" (id),
+  CONSTRAINT tenant_fk FOREIGN KEY (tenant_id) REFERENCES "Tenants" (id)
+);
+
+CREATE TABLE public."Payslips" (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  contract_id uuid NOT NULL,
+  period_start DATE NOT NULL,
+  period_end DATE NOT NULL,
+  base_salary DECIMAL(12,2) NOT NULL,
+  total_allowances DECIMAL(12,2) NOT NULL DEFAULT 0,
+  total_overtime DECIMAL(12,2) NOT NULL DEFAULT 0,
+  total_deductions DECIMAL(12,2) NOT NULL DEFAULT 0,
+  net_salary DECIMAL(12,2) NOT NULL,
+  status VARCHAR(20) NOT NULL, -- draft, approved, paid
+  payment_date DATE,
+  tenant_id uuid NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT payslips_pkey PRIMARY KEY (id),
+  CONSTRAINT contract_fk FOREIGN KEY (contract_id) REFERENCES "EmployeeContracts" (id),
+  CONSTRAINT tenant_fk FOREIGN KEY (tenant_id) REFERENCES "Tenants" (id)
+);

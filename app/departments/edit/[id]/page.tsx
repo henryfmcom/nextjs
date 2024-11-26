@@ -1,18 +1,25 @@
-import { Suspense } from 'react';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import DepartmentEditClient from '@/components/client/DepartmentEditClient';
-import { use } from 'react';
+import { createClient } from '@/utils/supabase/server';
+import { getUser } from '@/utils/supabase/queries';
+import AddDepartmentForm from '@/components/misc/AddDepartmentForm';
+import { redirect } from 'next/navigation';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function EditDepartment({ params }: PageProps) {
-  const resolvedParams = use(params);
+export default async function EditDepartment({ params }: PageProps) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const user = await getUser(supabase);
   
+  if (!user) {
+    redirect('/auth/signin');
+  }
+
   return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <DepartmentEditClient id={resolvedParams.id} />
-    </Suspense>
+    <DashboardLayout user={user}>
+      <AddDepartmentForm departmentId={id} />
+    </DashboardLayout>
   );
 } 

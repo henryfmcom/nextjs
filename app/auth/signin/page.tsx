@@ -1,11 +1,23 @@
-import { Suspense } from 'react';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import DynamicSignInWrapper from '@/components/client/DynamicSignInWrapper';
+import AuthForm from '@/components/misc/AuthForm';
+import { createClient } from '@/utils/supabase/server';
+import { redirect } from 'next/navigation';
 
-export default function SignIn() {
+export default async function SignIn() {
+  const supabase = await createClient();
+
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    return redirect('/');
+  }
+
   return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <DynamicSignInWrapper />
-    </Suspense>
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="w-full max-w-md">
+        <AuthForm />
+      </div>
+    </div>
   );
 } 
