@@ -197,7 +197,7 @@ export default function AddContractTypeForm({ contractTypeId }: { contractTypeId
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => router.push('/employees/contract-types')}
+                  onClick={() => router.push('/master/contract-types')}
                 >
                   Cancel
                 </Button>
