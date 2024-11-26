@@ -113,7 +113,7 @@ export default function AddKnowledgeForm({ knowledgeId }: { knowledgeId: string 
   }
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto max-w-2xl">
       <Card>
         <CardHeader>
           <CardTitle>{knowledgeId ? 'Edit Knowledge' : 'Add New Knowledge'}</CardTitle>

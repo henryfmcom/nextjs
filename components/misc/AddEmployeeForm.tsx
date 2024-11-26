@@ -323,7 +323,7 @@ export default function AddEmployeeForm({ employeeId }: { employeeId: string | n
   }
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto max-w-2xl">
       <Card>
         <CardHeader>
           <CardTitle>{employeeId ? 'Edit Employee' : 'Add New Employee'}</CardTitle>

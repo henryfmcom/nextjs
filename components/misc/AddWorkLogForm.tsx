@@ -301,7 +301,7 @@ export default function AddWorkLogForm({ workLogId, user }: AddWorkLogFormProps)
   }
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto max-w-2xl">
       <Card>
         <CardHeader>
           <CardTitle>{workLogId ? 'Edit Work Log' : 'New Work Log'}</CardTitle>

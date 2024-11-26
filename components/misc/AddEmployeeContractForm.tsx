@@ -197,7 +197,7 @@ export default function AddEmployeeContractForm({ contractId }: { contractId: st
   // ... rest of the component (no tenant, loading states) ...
 
   return (
-    <div className="container mx-auto max-w-3xl">
+    <div className="container mx-auto max-w-2xl">
       <Card>
         <CardHeader>
           <CardTitle>{contractId ? 'Edit Employee Contract' : 'Add New Employee Contract'}</CardTitle>

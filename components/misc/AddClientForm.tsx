@@ -126,7 +126,7 @@ export default function AddClientForm({ clientId }: { clientId: string | null}) 
   }
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto max-w-2xl">
       <main className="flex-1 p-8">
         <Card>
           <CardHeader>

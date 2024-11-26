@@ -171,7 +171,7 @@ export default function AddDepartmentForm({ departmentId }: { departmentId: stri
   }
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto max-w-2xl">
       <Card>
         <CardHeader>
           <CardTitle>{departmentId ? 'Edit Department' : 'Add New Department'}</CardTitle>

@@ -731,7 +731,7 @@ export default function AddProjectForm({ projectId }: { projectId: string | null
     }, []);
 
     return (
-      <div className="space-y-4">
+      <div className="container mx-auto max-w-2xl">
         {allocatedEmployees.length > 0 ? (
           allocatedEmployees.map((employee) => (
             <div
