@@ -105,18 +105,18 @@ export default function AddWorkLogForm({ workLogId, user }: AddWorkLogFormProps)
             setFormData({
               employee_id: workLog.employee_id,
               schedule_type_id: workLog.schedule_type_id,
-              start_time: workLog.start_time,
-              end_time: workLog.end_time,
+              start_time: workLog.start_time.slice(0, 5),
+              end_time: workLog.end_time.slice(0, 5),
               break_duration: workLog.break_duration.toString(),
               description: workLog.description || '',
               status: workLog.status,
               approved_by: workLog.approved_by,
               approved_at: workLog.approved_at,
-              dates: workLog.dates.map((date: any) => ({
-                id: date.id,
-                date: date.date.split('T')[0],
-                required: date.required
-              }))
+              dates: [{
+                id: crypto.randomUUID(),
+                date: workLog.date.split('T')[0],
+                required: true
+              }]
             });
           }
         }
@@ -204,8 +204,8 @@ export default function AddWorkLogForm({ workLogId, user }: AddWorkLogFormProps)
         employee_id: formData.employee_id,
         schedule_type_id: formData.schedule_type_id,
         date: dateEntry.date,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
+        start_time: formData.start_time + ':00',
+        end_time: formData.end_time + ':00',
         break_duration: parseInt(formData.break_duration) || 0,
         description: formData.description,
         status: 'pending',
