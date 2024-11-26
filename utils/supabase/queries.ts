@@ -19,6 +19,12 @@ export async function getEmployees(
       *,
       departments:EmployeeDepartments(
         department:Departments(*)
+      ),
+      contracts:EmployeeContracts(
+        id,
+        start_date,
+        end_date,
+        position:Positions(title)
       )
     `, { count: 'exact' })
     .eq('is_deleted', false)
