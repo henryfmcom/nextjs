@@ -19,19 +19,27 @@ import {
   addWorkLog,
   updateWorkLog,
   approveWorkLog,
-  rejectWorkLog
+  rejectWorkLog,
+  bulkAddWorkLogs
 } from '@/utils/supabase/queries';
 import { Badge } from "@/components/ui/badge";
-import { Check, X } from "lucide-react";
+import { Check, X, Plus, Trash2 } from "lucide-react";
+import { format } from 'date-fns';
+
+interface WorkLogDate {
+  id: string; // For React key
+  date: string;
+  required: boolean;
+}
 
 interface FormData {
   employee_id: string;
   schedule_type_id: string;
-  date: string;
   start_time: string;
   end_time: string;
   break_duration: string;
   description: string;
+  dates: WorkLogDate[];
   status?: string;
   approved_by?: string | null;
   approved_at?: string | null;
@@ -40,11 +48,15 @@ interface FormData {
 const initialFormData: FormData = {
   employee_id: '',
   schedule_type_id: '',
-  date: '',
   start_time: '09:00',
   end_time: '18:00',
   break_duration: '60',
   description: '',
+  dates: [{
+    id: crypto.randomUUID(),
+    date: format(new Date(), 'yyyy-MM-dd'),
+    required: true
+  }],
   status: 'pending',
   approved_by: null,
   approved_at: null,
@@ -93,7 +105,6 @@ export default function AddWorkLogForm({ workLogId, user }: AddWorkLogFormProps)
             setFormData({
               employee_id: workLog.employee_id,
               schedule_type_id: workLog.schedule_type_id,
-              date: workLog.date.split('T')[0],
               start_time: workLog.start_time,
               end_time: workLog.end_time,
               break_duration: workLog.break_duration.toString(),
@@ -101,6 +112,11 @@ export default function AddWorkLogForm({ workLogId, user }: AddWorkLogFormProps)
               status: workLog.status,
               approved_by: workLog.approved_by,
               approved_at: workLog.approved_at,
+              dates: workLog.dates.map((date: any) => ({
+                id: date.id,
+                date: date.date.split('T')[0],
+                required: date.required
+              }))
             });
           }
         }
@@ -130,40 +146,86 @@ export default function AddWorkLogForm({ workLogId, user }: AddWorkLogFormProps)
     }));
   };
 
+  const addDate = () => {
+    setFormData(prev => ({
+      ...prev,
+      dates: [
+        ...prev.dates,
+        {
+          id: crypto.randomUUID(),
+          date: '',
+          required: false
+        }
+      ]
+    }));
+  };
+
+  const removeDate = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      dates: prev.dates.filter(d => d.id !== id)
+    }));
+  };
+
+  const handleDateChange = (id: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      dates: prev.dates.map(d => 
+        d.id === id ? { ...d, date: value } : d
+      )
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (!currentTenant) {
-      setError('No tenant selected. Please select a tenant from account settings.');
+      setError('No tenant selected');
       return;
     }
 
-    if (!formData.employee_id || !formData.schedule_type_id || !formData.date || 
-        !formData.start_time || !formData.end_time) {
+    // Validate required fields
+    if (!formData.employee_id || !formData.schedule_type_id || 
+        !formData.start_time || !formData.end_time || 
+        !formData.dates.some(d => d.required && d.date)) {
       setError('Please fill in all required fields.');
       return;
     }
 
     try {
-      const workLogData = {
-        ...formData,
+      const supabase = createClient();
+      
+      // Filter out empty dates
+      const validDates = formData.dates.filter(d => d.date);
+      
+      // Create work log entries for each date
+      const workLogs = validDates.map(dateEntry => ({
+        employee_id: formData.employee_id,
+        schedule_type_id: formData.schedule_type_id,
+        date: dateEntry.date,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
         break_duration: parseInt(formData.break_duration) || 0,
+        description: formData.description,
         status: 'pending',
         tenant_id: currentTenant.id
-      };
+      }));
 
       if (workLogId) {
-        await updateWorkLog(supabase, { id: workLogId, ...workLogData });
+        await updateWorkLog(supabase, {
+          id: workLogId,
+          ...workLogs[0] // In edit mode, only update the single record
+        });
       } else {
-        await addWorkLog(supabase, workLogData);
+        await bulkAddWorkLogs(supabase, workLogs);
       }
 
-      router.push('/work-logs');
       toast({
         title: "Success",
-        description: `Work log ${workLogId ? 'updated' : 'added'} successfully.`,
+        description: `Work log${workLogs.length > 1 ? 's' : ''} ${workLogId ? 'updated' : 'added'} successfully.`,
       });
+      router.push('/work-logs');
     } catch (error: any) {
       setError(error.message || 'Failed to save work log.');
       console.error('Error saving work log:', error);
@@ -239,164 +301,159 @@ export default function AddWorkLogForm({ workLogId, user }: AddWorkLogFormProps)
   }
 
   return (
-    <div className="container mx-auto max-w-2xl">
+    <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <CardTitle>{workLogId ? 'Edit Work Log' : 'Add New Work Log'}</CardTitle>
-            {workLogId && formData.status && (
-              <div>{getStatusBadge(formData.status)}</div>
-            )}
-          </div>
-          {workLogId && formData.status === 'pending' && (
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleApprove}
-                className="text-green-600 hover:text-green-700"
-                title="Approve"
-              >
-                <Check className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleReject}
-                className="text-red-600 hover:text-red-700"
-                title="Reject"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+        <CardHeader>
+          <CardTitle>{workLogId ? 'Edit Work Log' : 'New Work Log'}</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-4">
-              <div>
-                <Label htmlFor="employee_id">Employee *</Label>
-                <Select
-                  value={formData.employee_id}
-                  onValueChange={(value) => handleSelectChange('employee_id', value)}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select employee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employees.map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
-                        {employee.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="employee_id">Employee *</Label>
+              <Select
+                value={formData.employee_id}
+                onValueChange={(value) => handleSelectChange('employee_id', value)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div>
-                <Label htmlFor="schedule_type_id">Schedule Type *</Label>
-                <Select
-                  value={formData.schedule_type_id}
-                  onValueChange={(value) => handleSelectChange('schedule_type_id', value)}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select schedule type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {scheduleTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name} ({type.multiplier}x)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label htmlFor="schedule_type_id">Schedule Type *</Label>
+              <Select
+                value={formData.schedule_type_id}
+                onValueChange={(value) => handleSelectChange('schedule_type_id', value)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select schedule type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {scheduleTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name} ({type.multiplier}x)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div>
-                <Label htmlFor="date">Date *</Label>
-                <Input
-                  id="date"
-                  name="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="start_time">Start Time *</Label>
+            <div className="space-y-2">
+              <Label>Date{formData.dates.length > 1 ? 's' : ''}</Label>
+              {formData.dates.map((dateEntry, index) => (
+                <div key={dateEntry.id} className="flex items-center gap-2">
                   <Input
-                    id="start_time"
-                    name="start_time"
-                    type="time"
-                    value={formData.start_time}
-                    onChange={handleInputChange}
-                    required
+                    type="date"
+                    value={dateEntry.date}
+                    onChange={(e) => handleDateChange(dateEntry.id, e.target.value)}
+                    required={dateEntry.required}
                   />
+                  {!dateEntry.required && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeDate(dateEntry.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-
-                <div>
-                  <Label htmlFor="end_time">End Time *</Label>
-                  <Input
-                    id="end_time"
-                    name="end_time"
-                    type="time"
-                    value={formData.end_time}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="break_duration">Break Duration (minutes)</Label>
-                <Input
-                  id="break_duration"
-                  name="break_duration"
-                  type="number"
-                  min="0"
-                  value={formData.break_duration}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={3}
-                />
-              </div>
-
-              {formData.status && formData.status !== 'pending' && (
-                <div className="mt-4 p-4 bg-muted rounded-lg">
-                  <div className="text-sm text-muted-foreground">
-                    {formData.status === 'approved' ? 'Approved' : 'Rejected'} by{' '}
-                    {formData.approved_by} on{' '}
-                    {formData.approved_at && new Date(formData.approved_at).toLocaleString()}
-                  </div>
-                </div>
-              )}
-
-              {error && <div className="text-red-500 bg-red-100 p-2 rounded">{error}</div>}
-
-              <div className="flex justify-end space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => router.push('/work-logs')}
+              ))}
+              {!workLogId && ( // Only show add button in create mode
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addDate}
+                  className="mt-2"
                 >
-                  Cancel
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Date
                 </Button>
-                <Button type="submit">Submit</Button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="start_time">Start Time *</Label>
+                <Input
+                  id="start_time"
+                  name="start_time"
+                  type="time"
+                  value={formData.start_time}
+                  onChange={handleInputChange}
+                  required
+                />
               </div>
+
+              <div>
+                <Label htmlFor="end_time">End Time *</Label>
+                <Input
+                  id="end_time"
+                  name="end_time"
+                  type="time"
+                  value={formData.end_time}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="break_duration">Break Duration (minutes)</Label>
+              <Input
+                id="break_duration"
+                name="break_duration"
+                type="number"
+                min="0"
+                value={formData.break_duration}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+              />
+            </div>
+
+            {formData.status && formData.status !== 'pending' && (
+              <div className="mt-4 p-4 bg-muted rounded-lg">
+                <div className="text-sm text-muted-foreground">
+                  {formData.status === 'approved' ? 'Approved' : 'Rejected'} by{' '}
+                  {formData.approved_by} on{' '}
+                  {formData.approved_at && new Date(formData.approved_at).toLocaleString()}
+                </div>
+              </div>
+            )}
+
+            {error && <div className="text-red-500 bg-red-100 p-2 rounded">{error}</div>}
+
+            <div className="flex justify-end space-x-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => router.push('/work-logs')}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Submit</Button>
             </div>
           </form>
         </CardContent>
