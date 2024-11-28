@@ -59,6 +59,22 @@ const NAVIGATION_ITEMS = [
     ]
   },
   {
+    title: "CRM",
+    icon: Users,
+    children: [
+      {
+        title: "Leads",
+        href: "/leads",
+        icon: Network,
+      },
+      {
+        title: "Opportunities",
+        href: "/opportunities",
+        icon: Briefcase,
+      },
+    ]
+  },
+  {
     title: "Master",
     icon: Database,
     children: [

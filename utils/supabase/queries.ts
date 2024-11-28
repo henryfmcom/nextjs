@@ -1518,3 +1518,545 @@ export async function bulkAddWorkLogs(
     throw error;
   }
 }
+
+// Lead Sources
+export async function getLeadSources(supabase: SupabaseClient, tenantId: string) {
+  const { data: sources, error } = await supabase
+    .from('LeadSources')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) {
+    console.error('Error fetching lead sources:', error);
+    return { sources: null };
+  }
+
+  return { sources };
+}
+
+// Lead Stages
+export async function getLeadStages(supabase: SupabaseClient, tenantId: string) {
+  const { data: stages, error } = await supabase
+    .from('LeadStages')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .order('order_index');
+
+  if (error) {
+    console.error('Error fetching lead stages:', error);
+    return { stages: null };
+  }
+
+  return { stages };
+}
+
+interface LeadData {
+  id?: string;
+  company_name: string;
+  industry?: string;
+  website?: string;
+  contact_name: string;
+  contact_title?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  source_id: string;
+  current_stage_id: string;
+  status: string;
+  assigned_to?: string;
+  notes?: string;
+  tenant_id: string;
+}
+
+// export async function createLead(
+//   supabase: SupabaseClient,
+//   leadData: LeadData
+// ) {
+//   const { data, error } = await supabase
+//     .from('Leads')
+//     .insert([leadData])
+//     .select()
+//     .single();
+
+//   if (error) {
+//     console.error('Error creating lead:', error);
+//     throw error;
+//   }
+
+//   return data;
+// }
+
+
+export async function addLead(supabase: SupabaseClient, leadData: LeadData) {
+  const { data, error } = await supabase
+    .from('Leads')
+    .insert([leadData])
+    .select();
+
+  if (error) {
+    console.error('Error adding lead:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+
+// export async function updateLead(
+//   supabase: SupabaseClient,
+//   leadId: string,
+//   leadData: Partial<LeadData>
+// ) {
+//   const { data, error } = await supabase
+//     .from('Leads')
+//     .update(leadData)
+//     .eq('id', leadId)
+//     .select()
+//     .single();
+
+//   if (error) {
+//     console.error('Error updating lead:', error);
+//     throw error;
+//   }
+
+//   return data;
+// }
+
+
+export async function updateLead(supabase: SupabaseClient, leadData: any) {
+  const { data, error } = await supabase
+    .from('Leads')
+    .update(leadData)
+    .eq('id', leadData.id)
+    .select();
+
+  if (error) {
+    console.error('Error updating lead:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+
+// Leads
+export async function getLeads(
+  supabase: SupabaseClient, 
+  tenantId: string,
+  page?: number,
+  itemsPerPage?: number
+) {
+  let query = supabase
+    .from('Leads')
+    .select(`
+      *,
+      source:source_id(name),
+      current_stage:current_stage_id(name),
+      assigned_to:assigned_to(given_name, surname)
+    `, { count: 'exact' })
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false });
+
+  if (page !== undefined && itemsPerPage !== undefined) {
+    const startRow = (page - 1) * itemsPerPage;
+    query = query.range(startRow, startRow + itemsPerPage - 1);
+  }
+
+  const { data: leads, error, count } = await query;
+
+  if (error) {
+    console.error('Error fetching leads:', error);
+    return { leads: null, count: 0 };
+  }
+
+  return { leads, count };
+}
+
+// export async function getLeadById(
+//   supabase: SupabaseClient,
+//   leadId: string
+// ) {
+//   const { data, error } = await supabase
+//     .from('Leads')
+//     .select('*')
+//     .eq('id', leadId)
+//     .single();
+
+//   if (error) {
+//     console.error('Error fetching lead:', error);
+//     throw error;
+//   }
+
+//   return data;
+// }
+
+export async function getLead(supabase: SupabaseClient, id: string) {
+  const { data: lead, error } = await supabase
+    .from('Leads')
+    .select(`
+      *,
+      source:source_id(name),
+      current_stage:current_stage_id(name),
+      assigned_to:assigned_to(given_name, surname)
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching lead:', error);
+    return null;
+  }
+
+  return lead;
+}
+
+
+export async function updateLeadStage(
+  supabase: SupabaseClient, 
+  leadId: string, 
+  toStageId: string,
+  userId: string,
+  notes?: string
+) {
+  try {
+    // First get the current stage and tenant_id
+    const { data: lead, error: leadError } = await supabase
+      .from('Leads')
+      .select('current_stage_id, tenant_id')
+      .eq('id', leadId)
+      .single();
+
+    if (leadError) throw leadError;
+    if (!lead) throw new Error('Lead not found');
+
+    // Call the stored procedure
+    const { error: procError } = await supabase.rpc('update_lead_stage', {
+      p_lead_id: leadId,
+      p_from_stage_id: lead.current_stage_id,
+      p_to_stage_id: toStageId,
+      p_changed_by: userId,
+      p_notes: notes || null,
+      p_tenant_id: lead.tenant_id
+    });
+
+    if (procError) throw procError;
+
+    return true;
+  } catch (error) {
+    console.error('Error updating lead stage:', error);
+    throw error;
+  }
+}
+
+export async function getLeadStageHistory(
+  supabase: SupabaseClient,
+  leadId: string
+) {
+  const { data: history, error } = await supabase
+    .rpc('get_lead_stage_history', {
+      p_lead_id: leadId
+    });
+
+  if (error) {
+    console.error('Error fetching lead stage history:', error);
+    return { history: null };
+  }
+
+  return { history };
+}
+
+export async function getLeadsByStage(
+  supabase: SupabaseClient,
+  tenantId: string,
+  stageId?: string
+) {
+  let query = supabase
+    .from('Leads')
+    .select(`
+      *,
+      source:source_id(name),
+      current_stage:current_stage_id(name),
+      assigned_to:assigned_to(given_name, surname)
+    `)
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false });
+
+  if (stageId) {
+    query = query.eq('current_stage_id', stageId);
+  }
+
+  const { data: leads, error } = await query;
+
+  if (error) {
+    console.error('Error fetching leads by stage:', error);
+    return { leads: null };
+  }
+
+  return { leads };
+}
+
+interface RawLeadMetrics {
+  stage_name: string;
+  stage_count: number;
+  avg_time_in_stage: string;
+  conversion_rate: number;
+}
+
+interface LeadMetrics {
+  stage_name: string;
+  stage_count: number;
+  avg_time_in_stage: string;
+  conversion_rate: number;
+}
+
+export async function getLeadMetrics(
+  supabase: SupabaseClient,
+  tenantId: string,
+  startDate?: string,
+  endDate?: string
+): Promise<{ metrics: LeadMetrics[] | null }> {
+  const { data: metrics, error } = await supabase
+    .rpc('get_lead_metrics', {
+      p_tenant_id: tenantId,
+      p_start_date: startDate,
+      p_end_date: endDate
+    });
+
+  if (error) {
+    console.error('Error fetching lead metrics:', error);
+    return { metrics: null };
+  }
+
+  // Format time intervals for display
+  const formattedMetrics = (metrics as RawLeadMetrics[]).map((metric: RawLeadMetrics) => ({
+    ...metric,
+    avg_time_in_stage: formatTimeInterval(metric.avg_time_in_stage)
+  }));
+
+  return { metrics: formattedMetrics };
+}
+
+// Helper function to format PostgreSQL interval to human-readable string
+function formatTimeInterval(interval: string): string {
+  if (!interval) return '0 days';
+  
+  const matches = interval.match(/(\d+) days (\d+):(\d+):(\d+)/);
+  if (!matches) return interval;
+
+  const [, days, hours] = matches;
+  if (parseInt(days) > 0) {
+    return `${days} days`;
+  }
+  return `${hours} hours`;
+}
+
+export async function getLeadsList(
+  supabase: SupabaseClient,
+  tenantId: string,
+  page: number,
+  itemsPerPage: number
+) {
+  const { data: leads, count, error } = await supabase
+    .from('Leads')
+    .select(`
+      *,
+      source:source_id(name),
+      current_stage:current_stage_id(name),
+      assigned_to:assigned_to(given_name, surname)
+    `, { count: 'exact' })
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false })
+    .range((page - 1) * itemsPerPage, page * itemsPerPage - 1);
+
+  if (error) {
+    console.error('Error fetching leads list:', error);
+    return { leads: null, count: 0 };
+  }
+
+  return { leads, count };
+}
+
+export interface LeadActivity {
+  id: string;
+  lead_id: string;
+  type: 'email' | 'call' | 'meeting' | 'note' | 'task';
+  subject: string;
+  description?: string;
+  activity_date: string;
+  duration_minutes?: number;
+  status?: 'planned' | 'completed' | 'cancelled';
+  performed_by: string;
+  tenant_id: string;
+}
+
+export interface LeadDocument {
+  id: string;
+  lead_id: string;
+  name: string;
+  file_url: string;
+  file_type: string;
+  file_size: number;
+  uploaded_by: string;
+  tenant_id: string;
+}
+
+export async function getLeadActivities(supabase: SupabaseClient, leadId: string) {
+  const { data, error } = await supabase
+    .from('LeadActivities')
+    .select(`
+      *,
+      performed_by:Employees(given_name, surname)
+    `)
+    .eq('lead_id', leadId)
+    .order('activity_date', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching lead activities:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function addLeadActivity(supabase: SupabaseClient, activity: Omit<LeadActivity, 'id'>) {
+  const { data, error } = await supabase
+    .from('LeadActivities')
+    .insert([activity])
+    .select();
+
+  if (error) {
+    console.error('Error adding lead activity:', error);
+    throw error;
+  }
+
+  return data[0];
+}
+
+export async function getLeadDocuments(supabase: SupabaseClient, leadId: string) {
+  const { data, error } = await supabase
+    .from('LeadDocuments')
+    .select(`
+      *,
+      uploaded_by:Employees(given_name, surname)
+    `)
+    .eq('lead_id', leadId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching lead documents:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function addLeadDocument(
+  supabase: SupabaseClient, 
+  file: File,
+  documentData: {
+    lead_id: string;
+    uploaded_by: string;
+    tenant_id: string;
+  },
+  onProgress?: (progress: number) => void
+) {
+  try {
+    // Generate unique file name
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
+    const filePath = `leads/${documentData.lead_id}/${fileName}`;
+
+    // Create upload options
+    const options = {
+      cacheControl: '3600',
+      upsert: false
+    } as const;
+
+    // Upload file to storage
+    const { error: uploadError } = await supabase.storage
+      .from('lead-documents')
+      .upload(filePath, file, options);
+
+    if (uploadError) throw uploadError;
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('lead-documents')
+      .getPublicUrl(filePath);
+
+    // Create document record
+    const { data, error } = await supabase
+      .from('LeadDocuments')
+      .insert([{
+        lead_id: documentData.lead_id,
+        name: file.name,
+        file_url: publicUrl,
+        file_type: file.type,
+        file_size: file.size,
+        uploaded_by: documentData.uploaded_by,
+        tenant_id: documentData.tenant_id
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error adding document:', error);
+    throw error;
+  }
+}
+
+export async function getActiveEmployees(supabase: SupabaseClient, tenantId: string) {
+  const { data: employees, error } = await supabase
+    .from('Employees')
+    .select('id, given_name, surname')
+    .eq('tenant_id', tenantId)
+    .eq('is_deleted', false)
+    .order('surname');
+
+  if (error) {
+    console.error('Error fetching employees:', error);
+    return null;
+  }
+
+  return employees;
+}
+
+export async function deleteLeadDocument(
+  supabase: SupabaseClient,
+  document: {
+    id: string;
+    file_url: string;
+  }
+) {
+  try {
+    // Extract path from URL pattern: /leads/{leadId}/{filename}
+    const matches = document.file_url.match(/\/leads\/(.+?)\/([^/]+)$/);
+    if (!matches) throw new Error('Invalid file URL format');
+    
+    const filePath = `leads/${matches[1]}/${matches[2]}`;
+
+    // Delete file from storage
+    const { error: storageError } = await supabase.storage
+      .from('lead-documents')
+      .remove([filePath]);
+
+    if (storageError) throw storageError;
+
+    // Delete record from database
+    const { error: dbError } = await supabase
+      .from('LeadDocuments')
+      .delete()
+      .eq('id', document.id);
+
+    if (dbError) throw dbError;
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    throw error;
+  }
+}
