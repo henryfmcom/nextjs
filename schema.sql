@@ -476,3 +476,21 @@ CREATE POLICY "Allow authenticated deletes"
 ON storage.objects FOR DELETE 
 TO authenticated
 USING (bucket_id = 'lead-documents');
+
+CREATE TABLE public."LeadConversions" (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  lead_id UUID NOT NULL REFERENCES "Leads"(id),
+  client_id UUID NOT NULL REFERENCES "Clients"(id),
+  converted_at TIMESTAMPTZ NOT NULL,
+  -- converted_by UUID NOT NULL REFERENCES "Employees"(id),
+  converted_by UUID NOT NULL,
+  deal_value DECIMAL(10,2),
+  conversion_notes TEXT,
+  tenant_id UUID NOT NULL REFERENCES "Tenants"(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Add indexes
+CREATE INDEX idx_lead_followups_lead_id ON "LeadFollowUps"(lead_id);
+CREATE INDEX idx_lead_followups_assigned_to ON "LeadFollowUps"(assigned_to);
+CREATE INDEX idx_lead_conversions_lead_id ON "LeadConversions"(lead_id); 

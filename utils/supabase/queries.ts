@@ -2060,3 +2060,147 @@ export async function deleteLeadDocument(
     throw error;
   }
 }
+
+export interface LeadFollowUp {
+  id: string;
+  lead_id: string;
+  due_date: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'completed' | 'overdue';
+  description: string;
+  assigned_to: string;
+  completed_at?: string;
+  tenant_id: string;
+}
+
+export async function addLeadFollowUp(
+  supabase: SupabaseClient, 
+  followUp: Omit<LeadFollowUp, 'id' | 'status'>
+) {
+  const { data, error } = await supabase
+    .from('LeadFollowUps')
+    .insert([{
+      ...followUp,
+      status: 'pending'
+    }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getLeadFollowUps(
+  supabase: SupabaseClient,
+  leadId: string
+) {
+  const { data, error } = await supabase
+    .from('LeadFollowUps')
+    .select(`
+      *,
+      assigned_to:Employees(given_name, surname)
+    `)
+    .eq('lead_id', leadId)
+    .order('due_date', { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function completeFollowUp(
+  supabase: SupabaseClient,
+  followUpId: string
+) {
+  const { data, error } = await supabase
+    .from('LeadFollowUps')
+    .update({
+      status: 'completed',
+      completed_at: new Date().toISOString()
+    })
+    .eq('id', followUpId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export interface LeadConversion {
+  id: string;
+  lead_id: string;
+  converted_at: string;
+  converted_by: string;
+  client_id: string;
+  conversion_notes?: string;
+  deal_value?: number;
+  tenant_id: string;
+}
+
+export async function convertLeadToClient(
+  supabase: SupabaseClient,
+  leadId: string,
+  conversionData: {
+    converted_by: string;
+    conversion_notes?: string;
+    deal_value?: number;
+    tenant_id: string;
+  }
+) {
+  try {
+    // Start a transaction
+    const { data: lead, error: leadError } = await supabase
+      .from('Leads')
+      .select('*')
+      .eq('id', leadId)
+      .single();
+
+    if (leadError) throw leadError;
+
+    // Create client record
+    const { data: client, error: clientError } = await supabase
+      .from('Clients')
+      .insert([{
+        name: lead.company_name,
+        client_code: lead.company_name.substring(0, 8).toUpperCase(),
+        // industry: lead.industry,
+        // website: lead.website,
+        // contact_name: lead.contact_name,
+        // contact_title: lead.contact_title,
+        // contact_email: lead.contact_email,
+        // contact_phone: lead.contact_phone,
+        tenant_id: conversionData.tenant_id
+      }])
+      .select()
+      .single();
+
+    if (clientError) throw clientError;
+
+    // Record conversion
+    const { error: conversionError } = await supabase
+      .from('LeadConversions')
+      .insert([{
+        lead_id: leadId,
+        converted_at: new Date().toISOString(),
+        converted_by: conversionData.converted_by,
+        client_id: client.id,
+        conversion_notes: conversionData.conversion_notes,
+        deal_value: conversionData.deal_value,
+        tenant_id: conversionData.tenant_id
+      }]);
+
+    if (conversionError) throw conversionError;
+
+    // Update lead status
+    const { error: updateError } = await supabase
+      .from('Leads')
+      .update({ status: 'converted' })
+      .eq('id', leadId);
+
+    if (updateError) throw updateError;
+
+    return client;
+  } catch (error) {
+    console.error('Error converting lead:', error);
+    throw error;
+  }
+}
