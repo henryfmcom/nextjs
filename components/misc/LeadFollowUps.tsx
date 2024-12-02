@@ -68,7 +68,7 @@ export function LeadFollowUps({ leadId }: LeadFollowUpsProps) {
   if (loading) return <div>Loading follow-ups...</div>;
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Follow-ups</CardTitle>
         <AddFollowUpForm leadId={leadId} onSuccess={loadFollowUps} />

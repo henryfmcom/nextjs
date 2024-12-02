@@ -72,8 +72,6 @@ export function LeadDocuments({ leadId }: LeadDocumentsProps) {
   if (loading) return <div>Loading documents...</div>;
 
   return (
-    <div className="container mx-auto space-y-4">
-
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Documents</CardTitle>
@@ -133,7 +131,6 @@ export function LeadDocuments({ leadId }: LeadDocumentsProps) {
           </ul>
         )}
       </CardContent>
-      </Card>
-    </div>
+    </Card>
   );
 } 

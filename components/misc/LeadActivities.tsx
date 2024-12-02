@@ -91,9 +91,7 @@ export function LeadActivities({ leadId }: LeadActivitiesProps) {
   if (loading) return <div>Loading activities...</div>;
 
   return (
-    <div className="container mx-auto space-y-4">
-
-    <Card>
+    <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Activities</CardTitle>
         <AddActivityForm leadId={leadId} onSuccess={loadActivities} />
@@ -149,7 +147,6 @@ export function LeadActivities({ leadId }: LeadActivitiesProps) {
           </ul>
         )}
       </CardContent>
-      </Card>
-    </div>
+    </Card>
   );
 } 
