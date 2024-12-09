@@ -1,20 +1,42 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
-import { getEmployees } from '@/utils/supabase/queries';
+import { getEmployees, inviteEmployee, getDepartmentsForDropdown } from '@/utils/supabase/queries';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Settings } from 'lucide-react';
+import {  MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Pagination } from '@/components/ui/pagination';
 import { DEFAULT_ITEMS_PER_PAGE } from '@/utils/constants';
 import { useTenant } from '@/utils/tenant-context';
 import { toast } from '@/components/ui/use-toast';
+import { TableWrapper } from '@/components/ui/table-wrapper';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { InviteEmployeeDialog } from './InviteEmployeeDialog';
+import { Label } from '@radix-ui/react-label';
+import { MultiSelect } from '@/components/ui/multi-select';
+import { Input } from '@/components/ui/input';
+import useDebounce from '@/utils/debounce';
+
 interface EmployeesPageProps {
   user: User;
+}
+
+interface Department {
+  id: string;
+  name: string;
+}
+
+interface EmployeeDepartment {
+  department: Department;
 }
 
 interface Employee {
@@ -23,12 +45,8 @@ interface Employee {
   surname: string;
   company_email: string;
   is_active: boolean;
-  departments: Array<{
-    department: {
-      id: string;
-      name: string;
-    }
-  }>;
+  is_invited: boolean;
+  departments: EmployeeDepartment[];
   contracts: Array<{
     id: string;
     start_date: string;
@@ -47,20 +65,88 @@ export default function EmployeesPage({ user }: EmployeesPageProps) {
   const [totalItems, setTotalItems] = useState(0);
   const router = useRouter();
   const { currentTenant } = useTenant();
-  
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedInviteStatus, setSelectedInviteStatus] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+  const [departments, setDepartments] = useState<Array<{ 
+    id: string; 
+    name: string;
+  }>>([]);
+
+  const statusOptions = useMemo(() => [
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' }
+  ], []);
+
+  const inviteStatusOptions = useMemo(() => [
+    { value: 'invited', label: 'Invited' },
+    { value: 'not_invited', label: 'Not Invited' }
+  ], []);
+
+  const handleInviteSuccess = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+  }, []);
+
   useEffect(() => {
     if (currentTenant) {
       loadEmployees();
     }
-  }, [currentPage, itemsPerPage, currentTenant]);
+  }, [
+    currentPage, 
+    itemsPerPage, 
+    currentTenant, 
+    refreshKey, 
+    selectedDepartments,
+    selectedStatuses,
+    selectedInviteStatus,
+    debouncedSearchTerm
+  ]);
+
+  useEffect(() => {
+    async function loadDepartments() {
+      if (!currentTenant) return;
+      try {
+        const supabase = createClient();
+        const deps = await getDepartmentsForDropdown(supabase, currentTenant.id);
+        
+        // Sort departments by their display names
+        const sortedDeps = deps.sort((a, b) => a.name.localeCompare(b.name));
+        setDepartments(sortedDeps || []);
+      } catch (error) {
+        console.error('Error loading departments:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load departments",
+          variant: "destructive",
+        });
+      }
+    }
+
+    loadDepartments();
+  }, [currentTenant]);
 
   async function loadEmployees() {
     try {
       setLoading(true);
       const supabase = createClient();
-      const { employees, count } = await getEmployees(supabase, currentTenant!.id, currentPage, itemsPerPage);
+      const { employees, count } = await getEmployees(
+        supabase, 
+        currentTenant!.id, 
+        currentPage, 
+        itemsPerPage,
+        {
+          departments: selectedDepartments,
+          statuses: selectedStatuses as ('active' | 'inactive')[],
+          invitedStatus: selectedInviteStatus as ('invited' | 'not_invited')[],
+          searchTerm: debouncedSearchTerm
+        }
+      );
       if (employees) {
-        setEmployees(employees);
+        setEmployees(employees as unknown as Employee[]);
         setTotalItems(count || 0);
       }
     } catch (error) {
@@ -92,6 +178,30 @@ export default function EmployeesPage({ user }: EmployeesPageProps) {
     });
 
     return activeContract?.position.title || '-';
+  };
+
+  const handleInvite = async (employeeId: string) => {
+    try {
+      setLoading(true);
+      const supabase = createClient();
+      await inviteEmployee(supabase, employeeId, currentTenant!.id);
+      
+      toast({
+        title: "Success",
+        description: "Invitation sent successfully",
+      });
+      
+      loadEmployees(); // Reload to update invited status
+    } catch (error) {
+      console.error('Error inviting employee:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send invitation",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!currentTenant) {
@@ -126,8 +236,12 @@ export default function EmployeesPage({ user }: EmployeesPageProps) {
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
+  function isValidDepartment(ed: EmployeeDepartment): boolean {
+    return ed && ed.department && typeof ed.department.name === 'string';
+  }
+
   return (
-    <div className="container mx-auto">
+    <div className="w-full">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Employee List</CardTitle>
@@ -136,8 +250,50 @@ export default function EmployeesPage({ user }: EmployeesPageProps) {
           </Link>
         </CardHeader>
         <CardContent>
-          <table className="w-full">
-            <thead>
+          <div className="mb-4 grid gap-4 grid-cols-1 md:grid-cols-2">
+            <div className="order-1">
+              <div className="flex gap-4">
+                <MultiSelect
+                  label="Department"
+                  options={departments.map(d => ({ 
+                    value: d.id, 
+                    label: d.name  // This will now include the parent department name
+                  })) ?? []}
+                  selected={selectedDepartments}
+                  onChange={setSelectedDepartments}
+                />
+
+                <MultiSelect
+                  label="Status"
+                  options={statusOptions}
+                  selected={selectedStatuses}
+                  onChange={setSelectedStatuses}
+                />
+
+                <MultiSelect
+                  label="Invite Status"
+                  options={inviteStatusOptions}
+                  selected={selectedInviteStatus}
+                  onChange={setSelectedInviteStatus}
+                />
+              </div>
+            </div>
+
+            <div className="order-2">
+              <Label htmlFor="search">Search</Label>
+              <Input
+                id="search"
+                placeholder="Search employee name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <TableWrapper>
+            <table className="w-full">
+              <thead>
               <tr className="text-left bg-muted">
                 <th className="p-2">Given Name</th>
                 <th className="p-2">Surname</th>
@@ -152,8 +308,8 @@ export default function EmployeesPage({ user }: EmployeesPageProps) {
               {employees?.map((employee) => (
                 <tr 
                   key={employee.id} 
-                  className="border-b hover:bg-muted/50 cursor-pointer"
-                  onClick={() => router.push(`/employees/edit/${employee.id}`)}
+                  // className="border-b hover:bg-muted/50 cursor-pointer"
+                  // onClick={() => router.push(`/employees/edit/${employee.id}`)}
                 >
                   <td className="p-2">{employee.given_name}</td>
                   <td className="p-2">{employee.surname}</td>
@@ -161,14 +317,16 @@ export default function EmployeesPage({ user }: EmployeesPageProps) {
                   <td className="p-2">{getActivePosition(employee.contracts)}</td>
                   <td className="p-2">
                     <div className="flex flex-wrap gap-1">
-                      {employee.departments?.map((ed) => (
-                        <span 
-                          key={ed.department.id}
-                          className="inline-flex px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-800"
-                        >
-                          {ed.department.name}
-                        </span>
-                      ))}
+                      {employee.departments
+                        ?.filter(isValidDepartment)
+                        .map((ed) => (
+                          <span 
+                            key={ed.department.id}
+                            className="inline-flex px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-800"
+                          >
+                            {ed.department.name}
+                          </span>
+                        ))}
                     </div>
                   </td>
                   <td className="p-2">
@@ -179,23 +337,45 @@ export default function EmployeesPage({ user }: EmployeesPageProps) {
                     }`}>
                       {employee.is_active ? 'Active' : 'Inactive'}
                     </span>
+                    {employee.is_invited && (
+                      <span className="ml-2 inline-flex px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-800">
+                        Invited
+                      </span>
+                    )}
                   </td>
                   <td className="p-2">
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/employees/edit/${employee.id}`);
+                    <DropdownMenu 
+                      open={openDropdownId === employee.id}
+                      onOpenChange={(open) => {
+                        setOpenDropdownId(open ? employee.id : null);
                       }}
                     >
-                      <Settings className="h-4 w-4" />
-                    </Button>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            router.push(`/employees/edit/${employee.id}`);
+                            setOpenDropdownId(null);
+                          }}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                        <InviteEmployeeDialog 
+                          employee={employee}
+                          onSuccess={handleInviteSuccess}
+                        />
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </TableWrapper>
 
           <Pagination
             currentPage={currentPage}

@@ -1,5 +1,35 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 
+interface Employee {
+  id: string;
+  given_name: string;
+  surname: string;
+  company_email: string;
+  is_active: boolean;
+  is_invited: boolean;
+  departments: Array<{
+    department: {
+      id: string;
+      name: string;
+    }
+  }>;
+  contracts: Array<{
+    id: string;
+    start_date: string;
+    end_date: string | null;
+    position: {
+      title: string;
+    }
+  }>;
+}
+
+interface EmployeeFilters {
+  departments?: string[];
+  statuses?: ('active' | 'inactive')[];
+  invitedStatus?: ('invited' | 'not_invited')[];
+  searchTerm?: string;
+}
+
 export const getUser = async (supabase: SupabaseClient) => {
   const {
     data: { user }
@@ -11,38 +41,54 @@ export async function getEmployees(
   supabase: SupabaseClient,
   tenantId: string,
   page?: number,
-  itemsPerPage?: number
+  itemsPerPage?: number,
+  filters?: EmployeeFilters
 ) {
+  const start = page ? (page - 1) * itemsPerPage! : 0;
+  const end = page ? start + itemsPerPage! - 1 : undefined;
+
   let query = supabase
     .from('Employees')
     .select(`
-      *,
-      departments:EmployeeDepartments(
-        department:Departments(*)
-      ),
-      contracts:EmployeeContracts(
-        id,
-        start_date,
-        end_date,
-        position:Positions(title)
-      )
+      id,
+      given_name,
+      surname,
+      company_email,
+      is_active,
+      is_invited,
+      departments:EmployeeDepartments(department:Departments(id, name)),
+      contracts:EmployeeContracts(id, start_date, end_date, position:Positions(title))
     `, { count: 'exact' })
-    .eq('is_deleted', false)
-    .eq('tenant_id', tenantId)
-    .order('surname', { ascending: true });
+    .eq('tenant_id', tenantId);
 
-  if (page !== undefined && itemsPerPage !== undefined) {
-    const startRow = (page - 1) * itemsPerPage;
-    query = query.range(startRow, startRow + itemsPerPage - 1);
+  // Apply filters
+  if (filters) {
+    if (filters.departments?.length) {
+      query = query.in('departments.department.id', filters.departments);
+    }
+
+    if (filters.statuses?.length) {
+      query = query.in('is_active', filters.statuses.map(s => s === 'active'));
+    }
+
+    if (filters.invitedStatus?.length) {
+      query = query.in('is_invited', filters.invitedStatus.map(s => s === 'invited'));
+    }
+
+    if (filters.searchTerm) {
+      query = query.or(`
+        given_name.ilike.%${filters.searchTerm}%,
+        surname.ilike.%${filters.searchTerm}%,
+        company_email.ilike.%${filters.searchTerm}%
+      `);
+    }
   }
 
-  const { data: employees, error, count } = await query;
+  const { data: employees, error, count } = await query
+    .range(start, end || 9)
+    .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching employees:', error);
-    return { employees: null, count: 0 };
-  }
-
+  if (error) throw error;
   return { employees, count };
 }
 
@@ -425,6 +471,33 @@ export async function getDepartments(
 
   return { departments, count };
 }
+
+export async function getDepartmentsForDropdown(supabase: SupabaseClient, tenantId: string) {
+  const { data: departments, error } = await supabase
+    .from('Departments')
+    .select(`
+      id, 
+      name,
+      parent_department:parent_department_id(
+        id,
+        name
+      )
+    `)
+    .eq('tenant_id', tenantId)
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) throw error;
+
+  // Format departments with hierarchical display names
+  return departments.map(dept => ({
+    id: dept.id,
+    name: dept.parent_department 
+      ? `${dept.parent_department.name} > ${dept.name}`
+      : dept.name
+  }));
+}
+
 
 export async function getDepartment(supabase: SupabaseClient, id: string) {
   const { data: department, error } = await supabase
@@ -1565,34 +1638,20 @@ interface LeadData {
   source_id: string;
   current_stage_id: string;
   status: string;
-  assigned_to?: string;
+  assigned_to?: string | null;
   notes?: string;
   tenant_id: string;
 }
 
-// export async function createLead(
-//   supabase: SupabaseClient,
-//   leadData: LeadData
-// ) {
-//   const { data, error } = await supabase
-//     .from('Leads')
-//     .insert([leadData])
-//     .select()
-//     .single();
-
-//   if (error) {
-//     console.error('Error creating lead:', error);
-//     throw error;
-//   }
-
-//   return data;
-// }
-
-
 export async function addLead(supabase: SupabaseClient, leadData: LeadData) {
+  const cleanedData = {
+    ...leadData,
+    assigned_to: leadData.assigned_to || null
+  };
+
   const { data, error } = await supabase
     .from('Leads')
-    .insert([leadData])
+    .insert([cleanedData])
     .select();
 
   if (error) {
@@ -1603,32 +1662,15 @@ export async function addLead(supabase: SupabaseClient, leadData: LeadData) {
   return data;
 }
 
+export async function updateLead(supabase: SupabaseClient, leadData: LeadData) {
+  const cleanedData = {
+    ...leadData,
+    assigned_to: leadData.assigned_to || null
+  };
 
-// export async function updateLead(
-//   supabase: SupabaseClient,
-//   leadId: string,
-//   leadData: Partial<LeadData>
-// ) {
-//   const { data, error } = await supabase
-//     .from('Leads')
-//     .update(leadData)
-//     .eq('id', leadId)
-//     .select()
-//     .single();
-
-//   if (error) {
-//     console.error('Error updating lead:', error);
-//     throw error;
-//   }
-
-//   return data;
-// }
-
-
-export async function updateLead(supabase: SupabaseClient, leadData: any) {
   const { data, error } = await supabase
     .from('Leads')
-    .update(leadData)
+    .update(cleanedData)
     .eq('id', leadData.id)
     .select();
 
@@ -2204,3 +2246,106 @@ export async function convertLeadToClient(
     throw error;
   }
 }
+
+export async function inviteEmployee(supabase: SupabaseClient, employeeId: string, tenantId: string) {
+  const { data, error } = await supabase.functions.invoke('invite-employee', {
+    body: { employee_id: employeeId, tenant_id: tenantId }
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createUserWithPassword(
+  supabase: SupabaseClient,
+  email: string,
+  password: string,
+  metadata: { given_name: string; surname: string }
+) {
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: metadata
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function checkUserExists(supabase: SupabaseClient, email: string) {
+  const { data, error } = await supabase.functions.invoke('check-user', {
+    body: { email }
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createEmployeeAccount(
+  supabase: SupabaseClient, 
+  employeeId: string, 
+  tenantId: string,
+  email: string,
+  password: string,
+  metadata: { given_name: string; surname: string }
+) {
+  try {
+    // Check if user exists using edge function
+    const { exists, userId: existingUserId } = await checkUserExists(supabase, email);
+    let userId: string;
+
+    if (exists && existingUserId) {
+      userId = existingUserId;
+    } else {
+      // Create new user
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata,
+          emailRedirectTo: `${window.location.origin}/landing`,
+        }
+      });
+
+      if (signUpError) throw signUpError;
+      if (!authData?.user?.id) throw new Error('Failed to create user account');
+
+      userId = authData.user.id;
+    }
+
+    // Check for existing UserTenant record
+    const { data: existingUserTenant } = await supabase
+      .from('UserTenants')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
+
+    // Create UserTenant record if it doesn't exist
+    if (!existingUserTenant) {
+      const { error: userTenantError } = await supabase
+        .from('UserTenants')
+        .insert({
+          user_id: userId,
+          tenant_id: tenantId,
+        })
+        .single();
+
+      if (userTenantError) throw userTenantError;
+    }
+
+    // Update employee status
+    const { error: updateError } = await supabase
+      .from('Employees')
+      .update({ is_invited: true })
+      .eq('id', employeeId);
+
+    if (updateError) throw updateError;
+
+    return { success: true, userId };
+  } catch (error) {
+    throw error;
+  }
+}
+

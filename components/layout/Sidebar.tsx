@@ -5,13 +5,20 @@ import { Users, Briefcase, X, ChevronLeft, ChevronRight, Calendar, FolderTree, B
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from './Logo';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+
+interface NavItem {
+  title: string;
+  href?: string;
+  icon: any;
+  children?: NavItem[];
+}
 
 interface SidebarProps {
   onClose?: () => void;
 }
 
-const NAVIGATION_ITEMS = [
+const NAVIGATION_ITEMS: NavItem[] = [
   {
     title: "Allocations",
     href: "/allocations",
@@ -31,11 +38,6 @@ const NAVIGATION_ITEMS = [
     title: "HR",
     icon: Users,
     children: [
-      {
-        title: "Departments",
-        href: "/departments",
-        icon: Network,
-      },
       {
         title: "Employees",
         href: "/employees",
@@ -79,6 +81,11 @@ const NAVIGATION_ITEMS = [
     icon: Database,
     children: [
       {
+        title: "Departments",
+        href: "/departments",
+        icon: Network,
+      },
+      {
         title: "Contract Types",
         href: "/master/contract-types",
         icon: FileText,
@@ -108,109 +115,153 @@ const NAVIGATION_ITEMS = [
 ];
 
 export function Sidebar({ onClose }: SidebarProps) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const pathname = usePathname();
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
-  const toggleSidebar = () => {
-    setIsExpanded(!isExpanded);
-  };
+  // Find which parent item should be expanded based on current path
+  const activeParent = useMemo(() => {
+    return NAVIGATION_ITEMS.find(item => 
+      item.children?.some(child => child.href === pathname)
+    )?.title;
+  }, [pathname]);
 
-  const toggleSection = (title: string) => {
-    if (!isExpanded) {
-      setIsExpanded(true);
-      setExpandedSection(title);
+  // Update expanded items when route changes
+  useEffect(() => {
+    if (activeParent) {
+      setExpandedItems([activeParent]);
+    }
+  }, [activeParent]);
+
+  const toggleItem = (title: string) => {
+    if (collapsed) {
+      // If sidebar is collapsed, expand it when clicking a parent item
+      setCollapsed(false);
+      setExpandedItems([title]);
+      return;
+    }
+
+    if (expandedItems.includes(title)) {
+      // Don't collapse if this is the active parent
+      if (title === activeParent) return;
+      setExpandedItems(expandedItems.filter(item => item !== title));
     } else {
-      setExpandedSection(expandedSection === title ? null : title);
+      // Collapse others and expand this one
+      setExpandedItems([title]);
     }
   };
 
-  const isActiveLink = (href: string) => pathname.startsWith(href);
+  const renderNavItem = (item: NavItem) => {
+    const isActive = item.href === pathname;
+    const isExpanded = expandedItems.includes(item.title);
+    const Icon = item.icon;
+    const hasActiveChild = item.children?.some(child => child.href === pathname);
+
+    if (item.children) {
+      return (
+        <div key={item.title}>
+          <button
+            onClick={() => toggleItem(item.title)}
+            className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors hover:bg-accent/50 ${
+              (isExpanded || hasActiveChild) ? 'bg-accent/80 text-accent-foreground' : ''
+            }`}
+            title={collapsed ? `${item.title} (Click to expand)` : undefined}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Icon className={`h-4 w-4 flex-shrink-0 ${
+                hasActiveChild ? 'text-primary' : ''
+              }`} />
+              {!collapsed && (
+                <span className="truncate">{item.title}</span>
+              )}
+            </div>
+            {!collapsed && (
+              <ChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform ${
+                isExpanded ? 'transform rotate-90' : ''
+              }`} />
+            )}
+          </button>
+          {isExpanded && !collapsed && (
+            <div className="ml-4 mt-1 space-y-1 border-l-2 pl-2">
+              {item.children.map((child) => (
+                <Link
+                  key={child.href}
+                  href={child.href || '#'}
+                  className={`flex items-center gap-2 p-2 rounded-lg transition-colors hover:bg-accent/50 ${
+                    child.href === pathname ? 'bg-accent text-accent-foreground' : ''
+                  }`}
+                  title={collapsed ? child.title : undefined}
+                >
+                  <child.icon className={`h-4 w-4 flex-shrink-0 ${
+                    child.href === pathname ? 'text-primary' : ''
+                  }`} />
+                  {!collapsed && (
+                    <span className="truncate">{child.title}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href || '#'}
+        className={`flex items-center gap-2 p-2 rounded-lg transition-colors hover:bg-accent/50 ${
+          isActive ? 'bg-accent text-accent-foreground' : ''
+        }`}
+        title={collapsed ? item.title : undefined}
+      >
+        <Icon className={`h-4 w-4 flex-shrink-0 ${
+          isActive ? 'text-primary' : ''
+        }`} />
+        {!collapsed && (
+          <span className="truncate">{item.title}</span>
+        )}
+      </Link>
+    );
+  };
 
   return (
-    <aside className={`bg-card shadow-md flex flex-col h-full transition-all duration-300 ${
-      isExpanded ? 'w-64' : 'w-20'
+    <div className={`relative flex flex-col h-screen border-r bg-card transition-all duration-300 ${
+      collapsed ? 'w-[52px]' : 'w-[240px]'
     }`}>
-      <div className="p-4">
+      <div className="p-2 flex flex-col h-full">
         {/* Logo and Title */}
-        <div className="mb-8 flex items-center justify-between">
-          <Logo iconOnly={!isExpanded} />
-          <div className="flex items-center">
+        <div className="mb-6 flex items-center justify-between px-2">
+          <Logo iconOnly={collapsed} />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(!collapsed)}
+            className="hidden lg:flex h-8 w-8"
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
+          {onClose && (
             <Button
               variant="ghost"
               size="icon"
-              onClick={toggleSidebar}
-              className="hidden lg:flex"
+              className="lg:hidden h-8 w-8"
+              onClick={onClose}
             >
-              {isExpanded ? (
-                <ChevronLeft className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
+              <X className="h-4 w-4" />
             </Button>
-            {onClose && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden"
-                onClick={onClose}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+          )}
         </div>
 
         {/* Navigation */}
-        <nav className="space-y-2">
-          {NAVIGATION_ITEMS.map((item) => (
-            <div key={item.title}>
-              {item.children ? (
-                // Parent item with children
-                <div className="space-y-1">
-                  <Button
-                    variant={expandedSection === item.title ? "secondary" : "ghost"}
-                    className={`w-full ${isExpanded ? 'justify-start' : 'justify-center'}`}
-                    onClick={() => toggleSection(item.title)}
-                    title={item.title}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {isExpanded && <span className="ml-2">{item.title}</span>}
-                  </Button>
-                  {isExpanded && expandedSection === item.title && (
-                    <div className="ml-4 space-y-1">
-                      {item.children.map((child) => (
-                        <Link key={child.href} href={child.href}>
-                          <Button
-                            variant={isActiveLink(child.href) ? "secondary" : "ghost"}
-                            className="w-full justify-start"
-                            size="sm"
-                          >
-                            <child.icon className="h-4 w-4" />
-                            <span className="ml-2">{child.title}</span>
-                          </Button>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                // Single item
-                <Link href={item.href}>
-                  <Button
-                    variant={isActiveLink(item.href) ? "secondary" : "ghost"}
-                    className={`w-full ${isExpanded ? 'justify-start' : 'justify-center'}`}
-                    title={item.title}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {isExpanded && <span className="ml-2">{item.title}</span>}
-                  </Button>
-                </Link>
-              )}
-            </div>
-          ))}
-        </nav>
+        <div className="flex-1 overflow-y-auto space-y-2 -mr-2 pr-2">
+          {NAVIGATION_ITEMS.map(renderNavItem)}
+        </div>
       </div>
-    </aside>
+    </div>
   );
 }

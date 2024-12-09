@@ -59,10 +59,11 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.34.3",
     "eslint-plugin-tailwindcss": "^3.17.3",
+    "ignore-loader": "^0.1.2",
     "postcss": "^8.4.38",
     "prettier": "^3.3.2",
     "prettier-plugin-tailwindcss": "^0.6.5",
-    "supabase": "^1.178.2",
+    "supabase": "^1.226.3",
     "typescript": "^5.5.2"
   }
 }
