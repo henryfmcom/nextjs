@@ -531,3 +531,76 @@ CREATE INDEX idx_lead_conversions_lead_id ON "LeadConversions"(lead_id);
 
 -- Add invited field to Employees table
 ALTER TABLE "Employees" ADD COLUMN is_invited BOOLEAN NOT NULL DEFAULT false;
+
+-- Opportunity Stages
+CREATE TABLE public."OpportunityStages" (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  order_index INTEGER NOT NULL,
+  probability INTEGER NOT NULL DEFAULT 0, -- Default win probability for stage
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  tenant_id uuid NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT opportunity_stages_pkey PRIMARY KEY (id),
+  CONSTRAINT tenant_fk FOREIGN KEY (tenant_id) REFERENCES "Tenants" (id),
+  CONSTRAINT unique_opportunity_stage_name UNIQUE (name, tenant_id)
+);
+
+-- Main Opportunities table
+CREATE TABLE public."Opportunities" (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  
+  -- Relations
+  lead_id uuid,
+  client_id uuid,
+  stage_id uuid NOT NULL,
+  assigned_to uuid,
+  
+  -- Financial
+  expected_revenue DECIMAL(12,2) NOT NULL,
+  currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+  probability INTEGER NOT NULL DEFAULT 0,
+  
+  -- Timing
+  expected_close_date DATE NOT NULL,
+  actual_close_date DATE,
+  
+  -- Status
+  status VARCHAR(50) NOT NULL, -- open, won, lost
+  loss_reason TEXT,
+  
+  -- System
+  tenant_id uuid NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  
+  CONSTRAINT opportunities_pkey PRIMARY KEY (id),
+  CONSTRAINT lead_fk FOREIGN KEY (lead_id) REFERENCES "Leads" (id),
+  CONSTRAINT client_fk FOREIGN KEY (client_id) REFERENCES "Clients" (id),
+  CONSTRAINT stage_fk FOREIGN KEY (stage_id) REFERENCES "OpportunityStages" (id),
+  CONSTRAINT assigned_to_fk FOREIGN KEY (assigned_to) REFERENCES "Employees" (id),
+  CONSTRAINT tenant_fk FOREIGN KEY (tenant_id) REFERENCES "Tenants" (id)
+);
+
+-- Opportunity Projects (replacing OpportunityProducts)
+CREATE TABLE public."OpportunityProjects" (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  opportunity_id uuid NOT NULL,
+  project_id uuid NOT NULL,
+  estimated_value DECIMAL(12,2) NOT NULL,
+  start_date DATE,
+  end_date DATE,
+  notes TEXT,
+  tenant_id uuid NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  
+  CONSTRAINT opportunity_projects_pkey PRIMARY KEY (id),
+  CONSTRAINT opportunity_fk FOREIGN KEY (opportunity_id) REFERENCES "Opportunities" (id),
+  CONSTRAINT project_fk FOREIGN KEY (project_id) REFERENCES "Projects" (id),
+  CONSTRAINT tenant_fk FOREIGN KEY (tenant_id) REFERENCES "Tenants" (id)
+);

@@ -2349,3 +2349,106 @@ export async function createEmployeeAccount(
   }
 }
 
+export async function getOpportunity(supabase: SupabaseClient, id: string) {
+  const { data, error } = await supabase
+    .from('Opportunities')
+    .select(`
+      *,
+      stage:OpportunityStages(name),
+      lead:Leads(company_name),
+      client:Clients(name),
+      assigned:Employees(given_name, surname),
+      projects:OpportunityProjects(
+        project:Projects(
+          id,
+          name,
+          code
+        )
+      )
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+interface OpportunityFilters {
+  searchTerm?: string;
+  minRevenue?: number;
+  maxRevenue?: number;
+  minProbability?: number;
+  maxProbability?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+export async function getOpportunities(
+  supabase: SupabaseClient,
+  tenantId: string,
+  page?: number,
+  itemsPerPage?: number,
+  filters?: OpportunityFilters
+) {
+  const start = page ? (page - 1) * itemsPerPage! : 0;
+  const end = page ? start + itemsPerPage! - 1 : undefined;
+
+  let query = supabase
+    .from('Opportunities')
+    .select(`
+      *,
+      stage:OpportunityStages(name),
+      lead:Leads(company_name),
+      client:Clients(name),
+      assigned:Employees(given_name, surname),
+      projects:OpportunityProjects(
+        project:Projects(
+          id,
+          name,
+          code
+        )
+      )
+    `, { count: 'exact' })
+    .eq('tenant_id', tenantId);
+
+  // Apply filters
+  if (filters) {
+    if (filters.searchTerm) {
+      query = query.or(`
+        title.ilike.%${filters.searchTerm}%,
+        description.ilike.%${filters.searchTerm}%
+      `);
+    }
+
+    if (filters.minRevenue !== undefined) {
+      query = query.gte('expected_revenue', filters.minRevenue);
+    }
+
+    if (filters.maxRevenue !== undefined) {
+      query = query.lte('expected_revenue', filters.maxRevenue);
+    }
+
+    if (filters.minProbability !== undefined) {
+      query = query.gte('probability', filters.minProbability);
+    }
+
+    if (filters.maxProbability !== undefined) {
+      query = query.lte('probability', filters.maxProbability);
+    }
+
+    if (filters.startDate) {
+      query = query.gte('expected_close_date', filters.startDate);
+    }
+
+    if (filters.endDate) {
+      query = query.lte('expected_close_date', filters.endDate);
+    }
+  }
+
+  const { data, error, count } = await query
+    .range(start, end || 9)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return { data, count };
+}
