@@ -30,6 +30,18 @@ interface EmployeeFilters {
   searchTerm?: string;
 }
 
+interface OpportunityFormData {
+  title: string;
+  description: string;
+  expected_revenue: number;
+  probability: number;
+  expected_close_date: string;
+  tenant_id: string;
+  currency: string;
+  status: string;
+  stage_id: string;
+}
+
 export const getUser = async (supabase: SupabaseClient) => {
   const {
     data: { user }
@@ -2397,12 +2409,12 @@ export async function getOpportunities(
     .from('Opportunities')
     .select(`
       *,
-      stage:OpportunityStages(name),
-      lead:Leads(company_name),
-      client:Clients(name),
-      assigned:Employees(given_name, surname),
-      projects:OpportunityProjects(
-        project:Projects(
+      stage:OpportunityStages (name),
+      lead:Leads (company_name),
+      client:Clients (name),
+      assigned:Employees (given_name, surname),
+      OpportunityProjects!left (
+        project:Projects (
           id,
           name,
           code
@@ -2451,4 +2463,118 @@ export async function getOpportunities(
 
   if (error) throw error;
   return { data, count };
+}
+
+export async function getOpportunityFormData(
+  supabase: SupabaseClient,
+  opportunityId: string,
+  tenantId: string
+) {
+  const { data: opportunity, error } = await supabase
+    .from('Opportunities')
+    .select(`
+      *,
+      OpportunityProjects!left (
+        project_id
+      )
+    `)
+    .eq('id', opportunityId)
+    .single();
+
+  if (error) throw error;
+  
+  if (opportunity && opportunity.tenant_id === tenantId) {
+    return {
+      title: opportunity.title,
+      description: opportunity.description,
+      expected_revenue: opportunity.expected_revenue,
+      probability: opportunity.probability,
+      expected_close_date: opportunity.expected_close_date,
+      currency: opportunity.currency,
+      status: opportunity.status,
+      stage_id: opportunity.stage_id,
+      projects: opportunity.OpportunityProjects?.map((p: any) => p.project_id) || [],
+    };
+  }
+  
+  return null;
+}
+
+export async function createOpportunity(
+  supabase: SupabaseClient,
+  opportunityData: OpportunityFormData,
+  selectedProjects: string[]
+) {
+  // Create new opportunity with required fields
+  const { data: newOpportunity, error: insertError } = await supabase
+    .from('Opportunities')
+    .insert([{
+      ...opportunityData,
+      currency: opportunityData.currency || 'USD', // Default currency
+      status: opportunityData.status || 'open', // Default status
+    }])
+    .select()
+    .single();
+
+  if (insertError) throw insertError;
+
+  // Add project associations with required fields
+  if (selectedProjects.length > 0) {
+    const projectAssociations = selectedProjects.map(projectId => ({
+      opportunity_id: newOpportunity.id,
+      project_id: projectId,
+      estimated_value: opportunityData.expected_revenue / selectedProjects.length, // Distribute evenly as default
+      tenant_id: opportunityData.tenant_id,
+    }));
+
+    const { error: projectError } = await supabase
+      .from('OpportunityProjects')
+      .insert(projectAssociations);
+
+    if (projectError) throw projectError;
+  }
+
+  return newOpportunity;
+}
+
+export async function updateOpportunity(
+  supabase: SupabaseClient,
+  opportunityId: string,
+  opportunityData: OpportunityFormData,
+  selectedProjects: string[]
+) {
+  // Update opportunity
+  const { error: updateError } = await supabase
+    .from('Opportunities')
+    .update({
+      ...opportunityData,
+      currency: opportunityData.currency || 'USD',
+      status: opportunityData.status || 'open',
+    })
+    .eq('id', opportunityId);
+
+  if (updateError) throw updateError;
+
+  // Update projects
+  // First, remove all existing project associations
+  await supabase
+    .from('OpportunityProjects')
+    .delete()
+    .eq('opportunity_id', opportunityId);
+
+  // Then add new project associations
+  if (selectedProjects.length > 0) {
+    const projectAssociations = selectedProjects.map(projectId => ({
+      opportunity_id: opportunityId,
+      project_id: projectId,
+      estimated_value: opportunityData.expected_revenue / selectedProjects.length, // Distribute evenly as default
+      tenant_id: opportunityData.tenant_id,
+    }));
+
+    const { error: projectError } = await supabase
+      .from('OpportunityProjects')
+      .insert(projectAssociations);
+
+    if (projectError) throw projectError;
+  }
 }

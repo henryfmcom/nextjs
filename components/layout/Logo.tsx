@@ -12,7 +12,7 @@ export function Logo({ className = "", iconOnly = false }: LogoProps) {
   return (
     <Link href="/" className={`flex items-center gap-2 ${className}`}>
       <LogoIcon />
-      {iconOnly ? null : <span className="font-bold text-base lg:text-xl">Your HRM</span>}
+      {iconOnly ? null : <span className="font-bold text-base lg:text-xl">ZenSapo</span>}
     </Link>
   );
 } 

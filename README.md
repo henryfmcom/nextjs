@@ -1,4 +1,4 @@
-# Your HRM SaaS
+# ZenSapo SaaS
 
 A comprehensive resource management system built with Next.js and Supabase, featuring employee allocation tracking, project management, and skill tracking.
 

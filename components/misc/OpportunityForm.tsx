@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Check, ChevronDown, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/utils/cn";
+import { getOpportunityFormData, createOpportunity, updateOpportunity } from '@/utils/supabase/queries';
 
 interface Project {
   id: string;
@@ -34,14 +35,22 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
     expected_revenue: 0,
     probability: 0,
     expected_close_date: '',
-    projects: [] as string[],
+    currency: 'USD',
+    status: 'open',
+    stage_id: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [projectSearchOpen, setProjectSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
   const { currentTenant } = useTenant();
+
+  const filteredProjects = projects.filter(project => 
+    project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    project.code.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,7 +64,6 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
           .from('Projects')
           .select('id, name, code')
           .eq('tenant_id', currentTenant.id)
-          .eq('is_deleted', false);
 
         if (projectsData) {
           setProjects(projectsData);
@@ -63,22 +71,11 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
 
         // Fetch opportunity if editing
         if (opportunityId) {
-          const { data: opportunity } = await supabase
-            .from('Opportunities')
-            .select('*, projects:OpportunityProjects(project_id)')
-            .eq('id', opportunityId)
-            .single();
-
-          if (opportunity && opportunity.tenant_id === currentTenant.id) {
-            setFormData({
-              title: opportunity.title,
-              description: opportunity.description,
-              expected_revenue: opportunity.expected_revenue,
-              probability: opportunity.probability,
-              expected_close_date: opportunity.expected_close_date,
-              projects: opportunity.projects.map((p: any) => p.project_id),
-            });
-            setSelectedProjects(opportunity.projects.map((p: any) => p.project_id));
+          const formData = await getOpportunityFormData(supabase, opportunityId, currentTenant.id);
+          
+          if (formData) {
+            setFormData(formData);
+            setSelectedProjects(formData.projects);
           } else {
             toast({
               title: "Error",
@@ -116,64 +113,15 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
 
     try {
       const supabase = createClient();
-
       const opportunityData = {
         ...formData,
         tenant_id: currentTenant.id,
       };
 
       if (opportunityId) {
-        // Update opportunity
-        const { error: updateError } = await supabase
-          .from('Opportunities')
-          .update(opportunityData)
-          .eq('id', opportunityId);
-
-        if (updateError) throw updateError;
-
-        // Update projects
-        // First, remove all existing project associations
-        await supabase
-          .from('OpportunityProjects')
-          .delete()
-          .eq('opportunity_id', opportunityId);
-
-        // Then add new project associations
-        const projectAssociations = selectedProjects.map(projectId => ({
-          opportunity_id: opportunityId,
-          project_id: projectId,
-        }));
-
-        if (projectAssociations.length > 0) {
-          const { error: projectError } = await supabase
-            .from('OpportunityProjects')
-            .insert(projectAssociations);
-
-          if (projectError) throw projectError;
-        }
+        await updateOpportunity(supabase, opportunityId, opportunityData, selectedProjects);
       } else {
-        // Create new opportunity
-        const { data: newOpportunity, error: insertError } = await supabase
-          .from('Opportunities')
-          .insert(opportunityData)
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-
-        // Add project associations
-        const projectAssociations = selectedProjects.map(projectId => ({
-          opportunity_id: newOpportunity.id,
-          project_id: projectId,
-        }));
-
-        if (projectAssociations.length > 0) {
-          const { error: projectError } = await supabase
-            .from('OpportunityProjects')
-            .insert(projectAssociations);
-
-          if (projectError) throw projectError;
-        }
+        await createOpportunity(supabase, opportunityData, selectedProjects);
       }
 
       toast({
@@ -270,16 +218,22 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
                     aria-expanded={projectSearchOpen}
                     className="justify-between"
                   >
-                    Select projects...
+                    {selectedProjects.length > 0
+                      ? `${selectedProjects.length} project${selectedProjects.length === 1 ? '' : 's'} selected`
+                      : "Select projects..."}
                     <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0">
                   <Command>
-                    <CommandInput placeholder="Search projects..." />
+                    <CommandInput 
+                      placeholder="Search projects..." 
+                      value={searchQuery}
+                      onValueChange={setSearchQuery}
+                    />
                     <CommandEmpty>No projects found.</CommandEmpty>
                     <CommandGroup>
-                      {projects.map((project) => (
+                      {filteredProjects.map((project) => (
                         <CommandItem
                           key={project.id}
                           onSelect={() => {

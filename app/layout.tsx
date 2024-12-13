@@ -7,7 +7,7 @@ import { TenantProvider } from '@/utils/tenant-context';
 import { Toaster } from '@/components/ui/toaster';
 
 const meta = {
-  title: 'Your HRM SaaS',
+  title: 'ZenSapo SaaS',
   description: 'Brought to you by Vercel and Supabase.',
   cardImage: '/og.png',
   robots: 'follow, index',
