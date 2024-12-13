@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslations } from '@/utils/i18n/TranslationsContext';
 
 interface LeadActivitiesProps {
   leadId: string;
@@ -39,6 +40,7 @@ const SORT_OPTIONS = [
 ];
 
 export function LeadActivities({ leadId }: LeadActivitiesProps) {
+  const { t } = useTranslations();
   const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTypes, setSelectedTypes] = useState<LeadActivity['type'][]>([]);
@@ -93,7 +95,7 @@ export function LeadActivities({ leadId }: LeadActivitiesProps) {
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Activities</CardTitle>
+        <CardTitle>{t('leads.activities.title')}</CardTitle>
         <AddActivityForm leadId={leadId} onSuccess={loadActivities} />
       </CardHeader>
       <CardContent>
@@ -102,16 +104,16 @@ export function LeadActivities({ leadId }: LeadActivitiesProps) {
             options={ACTIVITY_TYPE_OPTIONS}
             selected={selectedTypes}
             onChange={setSelectedTypes}
-            label="Filter by Type"
+            label={t('leads.activities.filter_type')}
           />
           <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Sort by" />
+              <SelectValue placeholder={t('leads.activities.sort_by')} />
             </SelectTrigger>
             <SelectContent>
               {SORT_OPTIONS.map(option => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                  {t(`leads.activities.sort.${option.value}`)}
                 </SelectItem>
               ))}
             </SelectContent>

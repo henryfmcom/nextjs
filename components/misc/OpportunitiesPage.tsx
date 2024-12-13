@@ -24,6 +24,8 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import useDebounce from '@/utils/debounce'
 import { MultiSelect } from '@/components/ui/multi-select'
+import { useTranslations } from '@/utils/i18n/TranslationsContext'
+import Link from 'next/link'
 
 interface Opportunity {
   id: string
@@ -61,6 +63,7 @@ export function OpportunitiesPage({ user }: OpportunitiesPageProps) {
   const [maxProbability, setMaxProbability] = useState<number>()
   const [startDate, setStartDate] = useState<string>('')
   const [endDate, setEndDate] = useState<string>('')
+  const { t } = useTranslations()
 
   useEffect(() => {
     if (currentTenant) {
@@ -174,50 +177,47 @@ export function OpportunitiesPage({ user }: OpportunitiesPageProps) {
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   return (
-    <div className="w-full">
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold">{t('opportunities.title')}</h1>
+      </div>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Opportunities</CardTitle>
+          <CardTitle>{t('opportunities.list')}</CardTitle>
           <Button onClick={() => router.push('/opportunities/add')}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Opportunity
+            {t('opportunities.add')}
           </Button>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {/* Filters */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label>Search</Label>
+              <div>
+                <Label>{t('opportunities.filters.search')}</Label>
                 <Input
-                  placeholder="Search opportunities..."
+                  placeholder={t('opportunities.filters.search_placeholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label>Revenue Range</Label>
+              <div>
+                <Label>{t('opportunities.filters.revenue')}</Label>
                 <div className="flex space-x-2">
                   <Input
                     type="number"
-                    placeholder="Min"
+                    placeholder={t('opportunities.filters.min')}
                     value={minRevenue || ''}
-                    onChange={(e) =>
-                      setMinRevenue(e.target.value ? Number(e.target.value) : undefined)
-                    }
+                    onChange={(e) => setMinRevenue(e.target.value ? Number(e.target.value) : undefined)}
                   />
                   <Input
                     type="number"
-                    placeholder="Max"
+                    placeholder={t('opportunities.filters.max')}
                     value={maxRevenue || ''}
-                    onChange={(e) =>
-                      setMaxRevenue(e.target.value ? Number(e.target.value) : undefined)
-                    }
+                    onChange={(e) => setMaxRevenue(e.target.value ? Number(e.target.value) : undefined)}
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label>Probability Range (%)</Label>
                 <div className="flex space-x-2">
@@ -270,13 +270,13 @@ export function OpportunitiesPage({ user }: OpportunitiesPageProps) {
               <table className="w-full">
                 <thead>
                   <tr className="text-left bg-muted">
-                    <th className="p-2">Title</th>
-                    <th className="p-2">Expected Revenue</th>
-                    <th className="p-2">Probability</th>
-                    <th className="p-2">Expected Close Date</th>
-                    <th className="p-2">Projects</th>
-                    <th className="p-2">Created At</th>
-                    <th className="p-2">Actions</th>
+                    <th className="p-2">{t('opportunities.table.title')}</th>
+                    <th className="p-2">{t('opportunities.table.revenue')}</th>
+                    <th className="p-2">{t('opportunities.table.probability')}</th>
+                    <th className="p-2">{t('opportunities.table.close_date')}</th>
+                    <th className="p-2">{t('opportunities.table.projects')}</th>
+                    <th className="p-2">{t('opportunities.table.created')}</th>
+                    <th className="p-2">{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>

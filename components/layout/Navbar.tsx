@@ -4,6 +4,7 @@ import { NavigationMenu, NavigationMenuList } from '@/components/ui/navigation-m
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
 import { ModeToggle } from '../landing/mode-toggle';
+import { LanguageSelector } from './LanguageSelector';
 import { User } from '@supabase/supabase-js';
 import { createApiClient } from '@/utils/supabase/api';
 import { createClient } from '@/utils/supabase/client';
@@ -54,6 +55,7 @@ export function Navbar({ user, onMenuClick }: NavbarProps) {
             {user ? 'Account' : 'Sign In'}
           </Button>
           <ModeToggle />
+          <LanguageSelector />
         </div>
       </div>
     </header>

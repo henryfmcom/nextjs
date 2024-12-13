@@ -17,6 +17,7 @@ import { Check, ChevronDown, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/utils/cn";
 import { getOpportunityFormData, createOpportunity, updateOpportunity } from '@/utils/supabase/queries';
+import { useTranslations } from '@/utils/i18n/TranslationsContext';
 
 interface Project {
   id: string;
@@ -46,6 +47,7 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
   const { currentTenant } = useTenant();
+  const { t } = useTranslations();
 
   const filteredProjects = projects.filter(project => 
     project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -144,13 +146,15 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{opportunityId ? 'Edit' : 'Add'} Opportunity</CardTitle>
+        <CardTitle>
+          {opportunityId ? t('opportunities.edit') : t('opportunities.add')}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid w-full items-center gap-4">
             <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="title">Title</Label>
+              <Label htmlFor="title">{t('opportunities.form.title')}</Label>
               <Input
                 id="title"
                 name="title"
@@ -161,7 +165,7 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
             </div>
 
             <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('opportunities.form.description')}</Label>
               <Input
                 id="description"
                 name="description"
@@ -171,7 +175,7 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
             </div>
 
             <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="expected_revenue">Expected Revenue</Label>
+              <Label htmlFor="expected_revenue">{t('opportunities.form.expected_revenue')}</Label>
               <Input
                 id="expected_revenue"
                 name="expected_revenue"
@@ -183,7 +187,7 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
             </div>
 
             <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="probability">Probability (%)</Label>
+              <Label htmlFor="probability">{t('opportunities.form.probability')}</Label>
               <Input
                 id="probability"
                 name="probability"
@@ -197,7 +201,7 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
             </div>
 
             <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="expected_close_date">Expected Close Date</Label>
+              <Label htmlFor="expected_close_date">{t('opportunities.form.expected_close_date')}</Label>
               <Input
                 id="expected_close_date"
                 name="expected_close_date"
@@ -209,7 +213,7 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
             </div>
 
             <div className="flex flex-col space-y-1.5">
-              <Label>Related Projects</Label>
+              <Label>{t('opportunities.form.projects')}</Label>
               <Popover open={projectSearchOpen} onOpenChange={setProjectSearchOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -220,18 +224,20 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
                   >
                     {selectedProjects.length > 0
                       ? `${selectedProjects.length} project${selectedProjects.length === 1 ? '' : 's'} selected`
-                      : "Select projects..."}
+                      : t('opportunities.form.select_projects')}
                     <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0">
                   <Command>
                     <CommandInput 
-                      placeholder="Search projects..." 
+                      placeholder={t('common.search')} 
                       value={searchQuery}
                       onValueChange={setSearchQuery}
                     />
-                    <CommandEmpty>No projects found.</CommandEmpty>
+                    <CommandEmpty>
+                      {t('opportunities.form.no_projects')}
+                    </CommandEmpty>
                     <CommandGroup>
                       {filteredProjects.map((project) => (
                         <CommandItem
@@ -294,10 +300,10 @@ export default function OpportunityForm({ opportunityId }: OpportunityFormProps)
               variant="outline"
               onClick={() => router.push('/opportunities')}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit">
-              {opportunityId ? 'Update' : 'Create'} Opportunity
+              {t('common.save')}
             </Button>
           </div>
         </form>

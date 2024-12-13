@@ -19,6 +19,7 @@ import { toast } from '@/components/ui/use-toast';
 import { ArrowRight } from 'lucide-react';
 import { useTenant } from '@/utils/tenant-context';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from '@/utils/i18n/TranslationsContext';
 
 interface LeadConversionDialogProps {
   leadId: string;
@@ -39,6 +40,7 @@ export function LeadConversionDialog({ leadId, companyName }: LeadConversionDial
     deal_value: undefined,
     conversion_notes: ''
   });
+  const { t } = useTranslations();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,14 +84,14 @@ export function LeadConversionDialog({ leadId, companyName }: LeadConversionDial
       <DialogTrigger asChild>
         <Button>
           <ArrowRight className="h-4 w-4 mr-2" />
-          Convert to Client
+          {t('leads.convert')}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Convert Lead to Client</DialogTitle>
+          <DialogTitle>{t('leads.conversion.title')}</DialogTitle>
           <DialogDescription>
-            Convert {companyName} from a lead to a client. This action cannot be undone.
+            {t('leads.conversion.description', { company: companyName })}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

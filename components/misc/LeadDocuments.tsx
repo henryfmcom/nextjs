@@ -19,12 +19,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from '@/utils/i18n/TranslationsContext';
 
 interface LeadDocumentsProps {
   leadId: string;
 }
 
 export function LeadDocuments({ leadId }: LeadDocumentsProps) {
+  const { t } = useTranslations();
   const [documents, setDocuments] = useState<LeadDocument[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -74,12 +76,12 @@ export function LeadDocuments({ leadId }: LeadDocumentsProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Documents</CardTitle>
+        <CardTitle>{t('leads.documents.title')}</CardTitle>
         <AddDocumentForm leadId={leadId} onSuccess={loadDocuments} />
       </CardHeader>
       <CardContent>
         {documents.length === 0 ? (
-          <p>No documents uploaded yet.</p>
+          <p>{t('leads.documents.no_documents')}</p>
         ) : (
           <ul className="space-y-4">
             {documents.map((document) => (

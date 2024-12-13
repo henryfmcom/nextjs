@@ -9,12 +9,14 @@ import { getLeadFollowUps, LeadFollowUp, completeFollowUp } from '@/utils/supaba
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
 import { AddFollowUpForm } from './AddFollowUpForm';
 import { toast } from '@/components/ui/use-toast';
+import { useTranslations } from '@/utils/i18n/TranslationsContext';
 
 interface LeadFollowUpsProps {
   leadId: string;
 }
 
 export function LeadFollowUps({ leadId }: LeadFollowUpsProps) {
+  const { t } = useTranslations();
   const [followUps, setFollowUps] = useState<LeadFollowUp[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -70,12 +72,12 @@ export function LeadFollowUps({ leadId }: LeadFollowUpsProps) {
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Follow-ups</CardTitle>
+        <CardTitle>{t('leads.followups.title')}</CardTitle>
         <AddFollowUpForm leadId={leadId} onSuccess={loadFollowUps} />
       </CardHeader>
       <CardContent>
         {followUps.length === 0 ? (
-          <p>No follow-ups scheduled.</p>
+          <p>{t('leads.followups.no_followups')}</p>
         ) : (
           <ul className="space-y-4">
             {followUps.map((followUp) => (

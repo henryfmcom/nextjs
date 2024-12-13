@@ -8,12 +8,15 @@ import { LeadConversionDialog } from './LeadConversionDialog';
 import { LeadFollowUps } from './LeadFollowUps';
 import { LeadActivities } from './LeadActivities';
 import { LeadDocuments } from './LeadDocuments';
+import { useTranslations } from '@/utils/i18n/TranslationsContext';
 
 interface LeadDetailsProps {
   lead: Lead;
 }
 
 export function LeadDetails({ lead }: LeadDetailsProps) {
+  const { t } = useTranslations();
+
   return (
     <div className="max-w-[1400px] mx-auto space-y-8">
       {/* Company Details Card */}
@@ -26,7 +29,7 @@ export function LeadDetails({ lead }: LeadDetailsProps) {
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <Badge variant={lead.status === 'qualified' ? 'default' : 'secondary'}>
-              {lead.status}
+              {t(`leads.status.${lead.status}`)}
             </Badge>
             {!lead.is_converted && (
               <LeadConversionDialog 
@@ -41,7 +44,7 @@ export function LeadDetails({ lead }: LeadDetailsProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
           {/* Company Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Company Information</h3>
+            <h3 className="text-lg font-semibold">{t('leads.form.company_info')}</h3>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <Building2 className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
@@ -69,7 +72,7 @@ export function LeadDetails({ lead }: LeadDetailsProps) {
 
           {/* Contact Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Contact Information</h3>
+            <h3 className="text-lg font-semibold">{t('leads.form.contact_info')}</h3>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <User className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />

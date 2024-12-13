@@ -15,6 +15,7 @@ import { DEFAULT_ITEMS_PER_PAGE } from '@/utils/constants';
 import { getLeadsList, getLeadMetrics } from '@/utils/supabase/queries';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { Progress } from "@/components/ui/progress";
+import { useTranslations } from '@/utils/i18n/TranslationsContext';
 
 interface Lead {
   id: string;
@@ -51,6 +52,7 @@ export default function LeadsPage() {
   const [loadingMetrics, setLoadingMetrics] = useState(true);
   const router = useRouter();
   const { currentTenant } = useTenant();
+  const { t } = useTranslations();
 
   useEffect(() => {
     if (currentTenant) {
@@ -146,7 +148,7 @@ export default function LeadsPage() {
       <Breadcrumb 
         items={[
           { label: 'CRM', href: '/leads' },
-          { label: 'Leads' }
+          { label: t('leads.title') }
         ]} 
       />
 
@@ -155,19 +157,8 @@ export default function LeadsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
-              <UsersIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-              Total Leads
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{getTotalLeads()}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
               <Target className="h-4 w-4 mr-2 text-muted-foreground" />
-              Qualified Leads
+              {t('leads.metrics.qualified')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -178,7 +169,7 @@ export default function LeadsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
               <TrendingUp className="h-4 w-4 mr-2 text-muted-foreground" />
-              Conversion Rate
+              {t('leads.metrics.conversion')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -190,19 +181,16 @@ export default function LeadsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
               <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-              Avg. Time to Qualify
+              {t('leads.metrics.time_to_qualify')}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{getAverageTime()}</div>
-          </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center space-x-2">
-            <CardTitle>Leads</CardTitle>
+            <CardTitle>{t('leads.title')}</CardTitle>
             <Button 
               variant="ghost" 
               size="sm"
@@ -210,12 +198,12 @@ export default function LeadsPage() {
               className="ml-2"
             >
               <KanbanSquare className="h-4 w-4 mr-2" />
-              Pipeline View
+              {t('leads.pipeline')}
             </Button>
           </div>
           <div className="flex items-center space-x-2">
             <Link href="/leads/add">
-              <Button variant="default">+ Add New</Button>
+              <Button variant="default">{t('leads.add')}</Button>
             </Link>
           </div>
         </CardHeader>
@@ -223,13 +211,13 @@ export default function LeadsPage() {
           <table className="w-full">
             <thead>
               <tr className="text-left bg-muted">
-                <th className="p-2">Company</th>
-                <th className="p-2">Contact</th>
-                <th className="p-2">Source</th>
-                <th className="p-2">Stage</th>
-                <th className="p-2">Status</th>
-                <th className="p-2">Assigned To</th>
-                <th className="p-2">Actions</th>
+                <th className="p-2">{t('leads.table.company')}</th>
+                <th className="p-2">{t('leads.table.contact')}</th>
+                <th className="p-2">{t('leads.table.source')}</th>
+                <th className="p-2">{t('leads.table.stage')}</th>
+                <th className="p-2">{t('leads.table.status')}</th>
+                <th className="p-2">{t('leads.table.assigned')}</th>
+                <th className="p-2">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>

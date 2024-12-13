@@ -12,6 +12,7 @@ import { useTenant } from '@/utils/tenant-context';
 import { toast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { addLead, updateLead, getLead } from '@/utils/supabase/queries';
+import { useTranslations } from '@/utils/i18n/TranslationsContext';
 
 interface FormData {
   company_name: string;
@@ -95,6 +96,7 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { currentTenant } = useTenant();
+  const { t } = useTranslations();
 
   useEffect(() => {
     if (currentTenant) {
@@ -253,16 +255,18 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
     <div className="container mx-auto max-w-3xl">
       <Card>
         <CardHeader>
-          <CardTitle>{leadId ? 'Edit Lead' : 'Add New Lead'}</CardTitle>
+          <CardTitle>
+            {leadId ? t('leads.edit') : t('leads.add')}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Company Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Company Information</h3>
+              <h3 className="text-lg font-semibold">{t('leads.form.company_info')}</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="company_name">Company Name *</Label>
+                  <Label htmlFor="company_name">{t('leads.form.company_name')}</Label>
                   <Input
                     id="company_name"
                     name="company_name"
@@ -272,7 +276,7 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="industry">Industry</Label>
+                  <Label htmlFor="industry">{t('leads.form.industry')}</Label>
                   <Input
                     id="industry"
                     name="industry"
@@ -284,7 +288,7 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="website">Website</Label>
+                  <Label htmlFor="website">{t('leads.form.website')}</Label>
                   <Input
                     id="website"
                     name="website"
@@ -294,7 +298,7 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="employee_count_range">Employee Count Range</Label>
+                  <Label htmlFor="employee_count_range">{t('leads.form.employee_count')}</Label>
                   <Select
                     value={formData.employee_count_range}
                     onValueChange={(value) => handleSelectChange('employee_count_range', value)}
@@ -316,10 +320,10 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
 
             {/* Contact Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Contact Information</h3>
+              <h3 className="text-lg font-semibold">{t('leads.form.contact_info')}</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="contact_name">Contact Name *</Label>
+                  <Label htmlFor="contact_name">{t('leads.form.contact_name')}</Label>
                   <Input
                     id="contact_name"
                     name="contact_name"
@@ -329,7 +333,7 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="contact_title">Title</Label>
+                  <Label htmlFor="contact_title">{t('leads.form.contact_title')}</Label>
                   <Input
                     id="contact_title"
                     name="contact_title"
@@ -341,7 +345,7 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="contact_email">Email</Label>
+                  <Label htmlFor="contact_email">{t('leads.form.contact_email')}</Label>
                   <Input
                     id="contact_email"
                     name="contact_email"
@@ -351,7 +355,7 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="contact_phone">Phone</Label>
+                  <Label htmlFor="contact_phone">{t('leads.form.contact_phone')}</Label>
                   <Input
                     id="contact_phone"
                     name="contact_phone"
@@ -364,10 +368,10 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
 
             {/* Lead Details */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Lead Details</h3>
+              <h3 className="text-lg font-semibold">{t('leads.form.lead_details')}</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="source_id">Source *</Label>
+                  <Label htmlFor="source_id">{t('leads.form.source')}</Label>
                   <Select
                     value={formData.source_id}
                     onValueChange={(value) => handleSelectChange('source_id', value)}
@@ -386,7 +390,7 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="current_stage_id">Stage *</Label>
+                  <Label htmlFor="current_stage_id">{t('leads.form.stage')}</Label>
                   <Select
                     value={formData.current_stage_id}
                     onValueChange={(value) => handleSelectChange('current_stage_id', value)}
@@ -408,7 +412,7 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="status">Status *</Label>
+                  <Label htmlFor="status">{t('leads.form.status')}</Label>
                   <Select
                     value={formData.status}
                     onValueChange={(value) => handleSelectChange('status', value)}
@@ -427,7 +431,7 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="assigned_to">Assigned To</Label>
+                  <Label htmlFor="assigned_to">{t('leads.form.assigned_to')}</Label>
                   <Select
                     value={formData.assigned_to}
                     onValueChange={(value) => handleSelectChange('assigned_to', value)}
@@ -447,7 +451,7 @@ export default function AddLeadForm({ leadId }: { leadId: string | null }) {
               </div>
 
               <div>
-                <Label htmlFor="notes">Notes</Label>
+                <Label htmlFor="notes">{t('leads.form.notes')}</Label>
                 <Textarea
                   id="notes"
                   name="notes"

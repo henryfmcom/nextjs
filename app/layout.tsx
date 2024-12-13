@@ -5,6 +5,7 @@ import '@/styles/main.css';
 import { ThemeProvider } from '@/app/theme-provider';
 import { TenantProvider } from '@/utils/tenant-context';
 import { Toaster } from '@/components/ui/toaster';
+import { TranslationsProvider } from '@/utils/i18n/TranslationsContext';
 
 const meta = {
   title: 'ZenSapo SaaS',
@@ -54,19 +55,19 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        <TenantProvider>
-          <ThemeProvider
-            defaultTheme="system"
-          >
-            <main
-              id="skip"
-              className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"
-            >
-              {children}
-            </main>
-            <Toaster />
-          </ThemeProvider>
-        </TenantProvider>
+        <TranslationsProvider>
+          <TenantProvider>
+            <ThemeProvider defaultTheme="system">
+              <main
+                id="skip"
+                className="min-h-[calc(100dvh-4rem)] md:min-h[calc(100dvh-5rem)]"
+              >
+                {children}
+              </main>
+              <Toaster />
+            </ThemeProvider>
+          </TenantProvider>
+        </TranslationsProvider>
       </body>
     </html>
   );
